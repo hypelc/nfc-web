@@ -318,6 +318,51 @@ def excluir_empresa(
     return {"id": empresa[0], "nome": empresa[1]}
 
 
+@router.post("/admin/establishments/{establishment_id}/reset-accesses")
+def resetar_acessos_empresa(
+    establishment_id: int = Path(gt=0),
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Remove o histórico de leituras de uma empresa sem apagar seu cadastro."""
+
+    with abrir_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            _exigir_admin(cursor, usuario["id"])
+
+            cursor.execute(
+                """
+                SELECT id, name
+                FROM establishments
+                WHERE id = %s
+                """,
+                (establishment_id,),
+            )
+            empresa = cursor.fetchone()
+
+            if empresa is None:
+                raise HTTPException(status_code=404, detail="Empresa não encontrada")
+
+            cursor.execute(
+                """
+                DELETE FROM access_events
+                WHERE qr_code_id IN (
+                    SELECT id
+                    FROM qr_codes
+                    WHERE establishment_id = %s
+                )
+                RETURNING id
+                """,
+                (establishment_id,),
+            )
+            acessos_excluidos = len(cursor.fetchall())
+
+    return {
+        "id": empresa[0],
+        "nome": empresa[1],
+        "acessos_excluidos": acessos_excluidos,
+    }
+
+
 @router.get("/establishments")
 def listar_estabelecimentos(usuario: dict = Depends(obter_usuario_atual)):
     """Lista as empresas que o usuário autenticado pode visualizar."""

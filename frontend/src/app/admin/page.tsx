@@ -327,6 +327,40 @@ export default function AdminPage() {
     }
   }
 
+  async function resetarAcessos(empresaId: number, nome: string) {
+    const confirmado = window.confirm(
+      `Zerar os acessos de ${nome}? Isso apagará permanentemente as leituras QR/NFC e manterá a empresa, o QR Code, o link e o login intactos.`,
+    );
+
+    if (!confirmado) return;
+
+    setProcessandoAcao(true);
+    setMensagemGerenciamento("");
+
+    try {
+      const resposta = await requisicaoAdmin(
+        `/dashboard/admin/establishments/${empresaId}/reset-accesses`,
+        { method: "POST" },
+      );
+
+      if (!resposta) return;
+
+      const resultado = (await resposta.json()) as {
+        acessos_excluidos: number;
+      };
+      setMensagemGerenciamento(
+        `${resultado.acessos_excluidos} acesso(s) zerado(s) para ${nome}.`,
+      );
+      await carregarPainelAdmin();
+    } catch (error) {
+      setMensagemGerenciamento(
+        error instanceof Error ? error.message : "Não foi possível zerar os acessos.",
+      );
+    } finally {
+      setProcessandoAcao(false);
+    }
+  }
+
   async function mostrarQr(qrCode: QrCodeAdmin) {
     setProcessandoAcao(true);
     setMensagemGerenciamento("");
@@ -620,6 +654,13 @@ export default function AdminPage() {
                           >
                             {empresa.qr_codes_ativos > 0 ? "Ativa" : "Sem QR"}
                           </span>
+                          <button
+                            className={styles.dangerButton}
+                            onClick={() => resetarAcessos(empresa.id, empresa.nome)}
+                            disabled={processandoAcao}
+                          >
+                            Zerar acessos
+                          </button>
                           <button
                             className={styles.dangerButton}
                             onClick={() => excluirEmpresa(empresa.id, empresa.nome)}
