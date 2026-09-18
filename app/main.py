@@ -35,10 +35,10 @@ def acessar_qr_code(codigo: str, source: str = "qr"): # A função recebe o par�
         with conexao.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, destination_url
+                SELECT qr_codes.id, qr_codes.destination_url
                 FROM qr_codes
                 JOIN establishments ON establishments.id = qr_codes.establishment_id
-                WHERE code = %s
+                WHERE qr_codes.code = %s
                   AND qr_codes.is_active = TRUE
                   AND establishments.archived_at IS NULL
                 """,

@@ -113,7 +113,12 @@ def _registrar_auditoria(
 ):
     cursor.execute(
         """
-        INSERT INTO admin_audit_logs (actor_user_id, action, resource_type, resource_id)
+        INSERT INTO public.admin_audit_logs (
+            actor_user_id,
+            action,
+            resource_type,
+            resource_id
+        )
         VALUES (%s, %s, %s, %s)
         """,
         (usuario_id, acao, tipo_recurso, recurso_id),

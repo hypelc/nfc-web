@@ -50,7 +50,9 @@ class RedirectContractTests(unittest.TestCase):
 
         self.assertEqual(resposta.status_code, 302)
         self.assertEqual(resposta.headers["location"], "https://example.com/avaliar")
-        self.assertIn("establishments.archived_at IS NULL", conexao.cursor_falso.comandos[0][0])
+        sql = conexao.cursor_falso.comandos[0][0]
+        self.assertIn("SELECT qr_codes.id, qr_codes.destination_url", sql)
+        self.assertIn("establishments.archived_at IS NULL", sql)
         self.assertEqual(conexao.cursor_falso.comandos[1][1], (42, "nfc"))
 
     def test_qr_de_empresa_arquivada_nao_redireciona(self):

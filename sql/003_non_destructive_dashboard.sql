@@ -24,7 +24,7 @@ ON establishments (archived_at);
 CREATE INDEX IF NOT EXISTS idx_access_events_qr_code_accessed_at
 ON access_events (qr_code_id, accessed_at);
 
-CREATE TABLE IF NOT EXISTS admin_audit_logs (
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
     id BIGSERIAL PRIMARY KEY,
     actor_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     action TEXT NOT NULL,
@@ -35,7 +35,16 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_resource
-ON admin_audit_logs (resource_type, resource_id, created_at DESC);
+ON public.admin_audit_logs (resource_type, resource_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor
-ON admin_audit_logs (actor_user_id, created_at DESC);
+ON public.admin_audit_logs (actor_user_id, created_at DESC);
+
+-- A auditoria é interna ao backend e não é uma superfície da Data API.
+-- RLS sem políticas nega acesso por linha; os REVOKEs também impedem que
+-- anon/authenticated alcancem a tabela mesmo quando o projeto tem grants
+-- padrão no schema public. O backend usa a conexão server-side DATABASE_URL.
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE public.admin_audit_logs FROM anon, authenticated;
+REVOKE ALL ON SEQUENCE public.admin_audit_logs_id_seq FROM anon, authenticated;
