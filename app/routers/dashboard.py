@@ -104,6 +104,71 @@ def _exigir_admin(cursor, usuario_id: str):
         )
 
 
+def _registrar_auditoria(
+    cursor,
+    usuario_id: str,
+    acao: str,
+    tipo_recurso: str,
+    recurso_id: int,
+):
+    cursor.execute(
+        """
+        INSERT INTO admin_audit_logs (actor_user_id, action, resource_type, resource_id)
+        VALUES (%s, %s, %s, %s)
+        """,
+        (usuario_id, acao, tipo_recurso, recurso_id),
+    )
+
+
+def _executar_inicio_novo_periodo(establishment_id: int, usuario_id: str):
+    with abrir_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            _exigir_admin(cursor, usuario_id)
+            cursor.execute(
+                """
+                SELECT id, name, stats_start_at, archived_at
+                FROM establishments
+                WHERE id = %s
+                """,
+                (establishment_id,),
+            )
+            empresa = cursor.fetchone()
+
+            if empresa is None:
+                raise HTTPException(status_code=404, detail="Empresa não encontrada")
+
+            if empresa[3] is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Não é possível iniciar um período para uma empresa arquivada",
+                )
+
+            cursor.execute(
+                """
+                UPDATE establishments
+                SET stats_start_at = NOW()
+                WHERE id = %s
+                RETURNING id, name, stats_start_at
+                """,
+                (establishment_id,),
+            )
+            periodo = cursor.fetchone()
+            _registrar_auditoria(
+                cursor,
+                usuario_id,
+                "stats_period_started",
+                "establishment",
+                establishment_id,
+            )
+
+    return {
+        "id": periodo[0],
+        "nome": periodo[1],
+        "periodo_anterior_iniciado_em": empresa[2],
+        "novo_periodo_iniciado_em": periodo[2],
+    }
+
+
 @router.post("/admin/establishments", status_code=status.HTTP_201_CREATED)
 def cadastrar_empresa(
     dados: CadastroEmpresaRequest,
@@ -195,19 +260,29 @@ def atualizar_destino_qr(
                 UPDATE qr_codes
                 SET destination_url = %s
                 WHERE code = %s
-                RETURNING code, destination_url, is_active
+                RETURNING id, code, destination_url, is_active
                 """,
                 (dados.link_avaliacao, codigo),
             )
             qr_code = cursor.fetchone()
+            if qr_code is None:
+                raise HTTPException(status_code=404, detail="QR Code não encontrado")
+
+            _registrar_auditoria(
+                cursor,
+                usuario["id"],
+                "qr_destination_updated",
+                "qr_code",
+                qr_code[0],
+            )
 
     if qr_code is None:
         raise HTTPException(status_code=404, detail="QR Code não encontrado")
 
     return {
-        "codigo": qr_code[0],
-        "destino_url": qr_code[1],
-        "ativo": qr_code[2],
+        "codigo": qr_code[1],
+        "destino_url": qr_code[2],
+        "ativo": qr_code[3],
     }
 
 
@@ -227,19 +302,29 @@ def atualizar_status_qr(
                 UPDATE qr_codes
                 SET is_active = %s
                 WHERE code = %s
-                RETURNING code, destination_url, is_active
+                RETURNING id, code, destination_url, is_active
                 """,
                 (dados.ativo, codigo),
             )
             qr_code = cursor.fetchone()
+            if qr_code is None:
+                raise HTTPException(status_code=404, detail="QR Code não encontrado")
+
+            _registrar_auditoria(
+                cursor,
+                usuario["id"],
+                "qr_status_updated",
+                "qr_code",
+                qr_code[0],
+            )
 
     if qr_code is None:
         raise HTTPException(status_code=404, detail="QR Code não encontrado")
 
     return {
-        "codigo": qr_code[0],
-        "destino_url": qr_code[1],
-        "ativo": qr_code[2],
+        "codigo": qr_code[1],
+        "destino_url": qr_code[2],
+        "ativo": qr_code[3],
     }
 
 
@@ -276,62 +361,19 @@ def obter_imagem_qr(
     )
 
 
-@router.delete("/admin/establishments/{establishment_id}")
-def excluir_empresa(
+@router.post("/admin/establishments/{establishment_id}/archive")
+def arquivar_empresa(
     establishment_id: int = Path(gt=0),
     usuario: dict = Depends(obter_usuario_atual),
 ):
-    """Exclui uma empresa, seus QR Codes e o histórico de acessos."""
+    """Arquiva uma empresa sem apagar seu cadastro ou histórico."""
 
     with abrir_conexao() as conexao:
         with conexao.cursor() as cursor:
             _exigir_admin(cursor, usuario["id"])
             cursor.execute(
                 """
-                DELETE FROM access_events
-                WHERE qr_code_id IN (
-                    SELECT id FROM qr_codes WHERE establishment_id = %s
-                )
-                """,
-                (establishment_id,),
-            )
-            cursor.execute(
-                """
-                DELETE FROM qr_codes
-                WHERE establishment_id = %s
-                """,
-                (establishment_id,),
-            )
-            cursor.execute(
-                """
-                DELETE FROM establishments
-                WHERE id = %s
-                RETURNING id, name
-                """,
-                (establishment_id,),
-            )
-            empresa = cursor.fetchone()
-
-    if empresa is None:
-        raise HTTPException(status_code=404, detail="Empresa não encontrada")
-
-    return {"id": empresa[0], "nome": empresa[1]}
-
-
-@router.post("/admin/establishments/{establishment_id}/reset-accesses")
-def resetar_acessos_empresa(
-    establishment_id: int = Path(gt=0),
-    usuario: dict = Depends(obter_usuario_atual),
-):
-    """Remove o histórico de leituras de uma empresa sem apagar seu cadastro."""
-
-    with abrir_conexao() as conexao:
-        with conexao.cursor() as cursor:
-            _exigir_admin(cursor, usuario["id"])
-
-            cursor.execute(
-                """
-                SELECT id, name
+                SELECT id, name, archived_at
                 FROM establishments
                 WHERE id = %s
                 """,
@@ -342,25 +384,124 @@ def resetar_acessos_empresa(
             if empresa is None:
                 raise HTTPException(status_code=404, detail="Empresa não encontrada")
 
+            if empresa[2] is not None:
+                raise HTTPException(status_code=409, detail="Empresa já está arquivada")
+
             cursor.execute(
                 """
-                DELETE FROM access_events
-                WHERE qr_code_id IN (
-                    SELECT id
-                    FROM qr_codes
-                    WHERE establishment_id = %s
-                )
-                RETURNING id
+                UPDATE establishments
+                SET archived_at = NOW()
+                WHERE id = %s AND archived_at IS NULL
+                RETURNING id, name, archived_at
                 """,
                 (establishment_id,),
             )
-            acessos_excluidos = len(cursor.fetchall())
+            arquivada = cursor.fetchone()
+
+            if arquivada is None:
+                raise HTTPException(status_code=409, detail="Empresa já está arquivada")
+
+            _registrar_auditoria(
+                cursor,
+                usuario["id"],
+                "establishment_archived",
+                "establishment",
+                establishment_id,
+            )
 
     return {
-        "id": empresa[0],
-        "nome": empresa[1],
-        "acessos_excluidos": acessos_excluidos,
+        "id": arquivada[0],
+        "nome": arquivada[1],
+        "arquivada_em": arquivada[2],
     }
+
+
+@router.post("/admin/establishments/{establishment_id}/restore")
+def restaurar_empresa(
+    establishment_id: int = Path(gt=0),
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Restaura uma empresa sem alterar o estado individual dos seus QR Codes."""
+
+    with abrir_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            _exigir_admin(cursor, usuario["id"])
+            cursor.execute(
+                """
+                SELECT id, name, archived_at
+                FROM establishments
+                WHERE id = %s
+                """,
+                (establishment_id,),
+            )
+            empresa = cursor.fetchone()
+
+            if empresa is None:
+                raise HTTPException(status_code=404, detail="Empresa não encontrada")
+
+            if empresa[2] is None:
+                raise HTTPException(status_code=409, detail="Empresa já está ativa")
+
+            cursor.execute(
+                """
+                UPDATE establishments
+                SET archived_at = NULL
+                WHERE id = %s AND archived_at IS NOT NULL
+                RETURNING id, name
+                """,
+                (establishment_id,),
+            )
+            restaurada = cursor.fetchone()
+
+            if restaurada is None:
+                raise HTTPException(status_code=409, detail="Empresa já está ativa")
+
+            _registrar_auditoria(
+                cursor,
+                usuario["id"],
+                "establishment_restored",
+                "establishment",
+                establishment_id,
+            )
+
+    return {"id": restaurada[0], "nome": restaurada[1]}
+
+
+@router.post("/admin/establishments/{establishment_id}/start-stats-period")
+def iniciar_periodo_estatisticas(
+    establishment_id: int = Path(gt=0),
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Inicia um período novo preservando os eventos históricos."""
+
+    return _executar_inicio_novo_periodo(establishment_id, usuario["id"])
+
+
+@router.delete("/admin/establishments/{establishment_id}")
+def excluir_empresa(
+    establishment_id: int = Path(gt=0),
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Recusa a operação antiga para impedir exclusões físicas durante a transição."""
+
+    with abrir_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            _exigir_admin(cursor, usuario["id"])
+
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="Exclusão permanente desativada; use a operação de arquivamento",
+        headers={"Allow": "POST"},
+    )
+
+@router.post("/admin/establishments/{establishment_id}/reset-accesses")
+def resetar_acessos_empresa(
+    establishment_id: int = Path(gt=0),
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Mantém compatibilidade sem apagar eventos; usa o novo marco estatístico."""
+
+    return _executar_inicio_novo_periodo(establishment_id, usuario["id"])
 
 
 @router.get("/establishments")
@@ -379,20 +520,40 @@ def listar_estabelecimentos(usuario: dict = Depends(obter_usuario_atual)):
                     """
                     SELECT id, name
                     FROM establishments
+                    WHERE archived_at IS NULL
                     ORDER BY name
                     """
                 )
             else:
+                if client_establishment_id is None:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Cliente sem empresa vinculada",
+                    )
+
                 cursor.execute(
                     """
-                    SELECT id, name
+                    SELECT id, name, archived_at
                     FROM establishments
                     WHERE id = %s
                     """,
                     (client_establishment_id,),
                 )
+                empresa_cliente = cursor.fetchone()
 
-            empresas = cursor.fetchall()
+                if empresa_cliente is None:
+                    raise HTTPException(status_code=404, detail="Empresa não encontrada")
+
+                if empresa_cliente[2] is not None:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="O acesso desta empresa está temporariamente indisponível",
+                    )
+
+                empresas = [empresa_cliente[:2]]
+
+            if role == "admin":
+                empresas = cursor.fetchall()
 
     return {
         "role": role,
@@ -400,6 +561,44 @@ def listar_estabelecimentos(usuario: dict = Depends(obter_usuario_atual)):
             {"id": empresa_id, "nome": nome}
             for empresa_id, nome in empresas
         ],
+    }
+
+
+@router.get("/admin/archived-establishments")
+def listar_estabelecimentos_arquivados(
+    usuario: dict = Depends(obter_usuario_atual),
+):
+    """Lista empresas arquivadas para restauração administrativa."""
+
+    with abrir_conexao() as conexao:
+        with conexao.cursor() as cursor:
+            _exigir_admin(cursor, usuario["id"])
+            cursor.execute(
+                """
+                SELECT
+                    e.id,
+                    e.name,
+                    e.archived_at,
+                    COUNT(qc.id) AS total_qr_codes
+                FROM establishments e
+                LEFT JOIN qr_codes qc ON qc.establishment_id = e.id
+                WHERE e.archived_at IS NOT NULL
+                GROUP BY e.id, e.name, e.archived_at
+                ORDER BY e.archived_at DESC, e.name
+                """
+            )
+            empresas = cursor.fetchall()
+
+    return {
+        "empresas": [
+            {
+                "id": empresa_id,
+                "nome": nome,
+                "arquivada_em": arquivada_em,
+                "total_qr_codes": total_qr_codes or 0,
+            }
+            for empresa_id, nome, arquivada_em, total_qr_codes in empresas
+        ]
     }
 
 
@@ -448,7 +647,7 @@ def obter_resumo_dashboard(
 
             cursor.execute(
                 """
-                SELECT id, name
+                SELECT id, name, stats_start_at, archived_at
                 FROM establishments
                 WHERE id = %s
                 """,
@@ -462,16 +661,30 @@ def obter_resumo_dashboard(
                     detail="Empresa não encontrada",
                 )
 
-            establishment_id, establishment_name = establishment
+            (
+                establishment_id,
+                establishment_name,
+                stats_start_at,
+                archived_at,
+            ) = establishment
+
+            if role == "client" and archived_at is not None:
+                raise HTTPException(
+                    status_code=403,
+                    detail="O acesso desta empresa está temporariamente indisponível",
+                )
 
             cursor.execute(
                 """
                 SELECT
                     COUNT(*) FILTER (
-                        WHERE ae.accessed_at >= CURRENT_DATE
+                        WHERE ae.accessed_at >= GREATEST(e.stats_start_at, CURRENT_DATE)
                     ) AS acessos_hoje,
                     COUNT(*) FILTER (
-                        WHERE ae.accessed_at >= CURRENT_DATE - INTERVAL '6 days'
+                        WHERE ae.accessed_at >= GREATEST(
+                            e.stats_start_at,
+                            CURRENT_DATE - INTERVAL '6 days'
+                        )
                     ) AS acessos_ultimos_7_dias,
                     COUNT(ae.id) AS total_acessos,
                     COUNT(*) FILTER (
@@ -481,9 +694,12 @@ def obter_resumo_dashboard(
                         WHERE ae.source = 'nfc'
                     ) AS acessos_nfc,
                     MAX(ae.accessed_at) AS ultimo_acesso
-                FROM qr_codes qc
-                LEFT JOIN access_events ae ON ae.qr_code_id = qc.id
-                WHERE qc.establishment_id = %s
+                FROM establishments e
+                LEFT JOIN qr_codes qc ON qc.establishment_id = e.id
+                LEFT JOIN access_events ae
+                    ON ae.qr_code_id = qc.id
+                    AND ae.accessed_at >= e.stats_start_at
+                WHERE e.id = %s
                 """,
                 (establishment_id,),
             )
@@ -492,9 +708,9 @@ def obter_resumo_dashboard(
             cursor.execute(
                 """
                 SELECT code, destination_url, is_active
-                FROM qr_codes
-                WHERE establishment_id = %s
-                ORDER BY created_at DESC, id DESC
+                FROM qr_codes qc
+                WHERE qc.establishment_id = %s
+                ORDER BY qc.created_at DESC, qc.id DESC
                 LIMIT 1
                 """,
                 (establishment_id,),
@@ -506,7 +722,9 @@ def obter_resumo_dashboard(
                 SELECT qc.code, ae.source, ae.accessed_at
                 FROM access_events ae
                 JOIN qr_codes qc ON qc.id = ae.qr_code_id
+                JOIN establishments e ON e.id = qc.establishment_id
                 WHERE qc.establishment_id = %s
+                  AND ae.accessed_at >= e.stats_start_at
                 ORDER BY ae.accessed_at DESC
                 LIMIT 10
                 """,
@@ -536,6 +754,8 @@ def obter_resumo_dashboard(
         "empresa": {
             "id": establishment_id,
             "nome": establishment_name,
+            "arquivada": archived_at is not None,
+            "stats_start_at": stats_start_at,
         },
         "estatisticas": {
             "acessos_hoje": acessos_hoje,
@@ -587,8 +807,11 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
                     MAX(ae.accessed_at) AS ultimo_acesso
                 FROM establishments e
                 LEFT JOIN qr_codes qc ON qc.establishment_id = e.id
-                LEFT JOIN access_events ae ON ae.qr_code_id = qc.id
-                GROUP BY e.id, e.name
+                LEFT JOIN access_events ae
+                    ON ae.qr_code_id = qc.id
+                    AND ae.accessed_at >= e.stats_start_at
+                WHERE e.archived_at IS NULL
+                GROUP BY e.id, e.name, e.stats_start_at
                 ORDER BY e.name
                 """
             )
@@ -600,6 +823,8 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
                 FROM access_events ae
                 JOIN qr_codes qc ON qc.id = ae.qr_code_id
                 JOIN establishments e ON e.id = qc.establishment_id
+                WHERE e.archived_at IS NULL
+                  AND ae.accessed_at >= e.stats_start_at
                 ORDER BY ae.accessed_at DESC
                 LIMIT 12
             """
@@ -608,9 +833,11 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
 
             cursor.execute(
                 """
-                SELECT id, establishment_id, code, destination_url, is_active
-                FROM qr_codes
-                ORDER BY created_at DESC, id DESC
+                SELECT qc.id, qc.establishment_id, qc.code, qc.destination_url, qc.is_active
+                FROM qr_codes qc
+                JOIN establishments e ON e.id = qc.establishment_id
+                WHERE e.archived_at IS NULL
+                ORDER BY qc.created_at DESC, qc.id DESC
                 """
             )
             qr_codes = cursor.fetchall()

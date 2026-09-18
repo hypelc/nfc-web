@@ -43,6 +43,12 @@ type AdminOverview = {
     origem: "qr" | "nfc";
     acessado_em: string;
   }>;
+  empresas_arquivadas: Array<{
+    id: number;
+    nome: string;
+    arquivada_em: string;
+    total_qr_codes: number;
+  }>;
 };
 
 type CadastroEmpresaResponse = {
@@ -146,11 +152,22 @@ export default function AdminPage() {
     setCarregando(true);
 
     try {
-      const resposta = await requisicaoAdmin("/dashboard/admin/overview");
+      const [resposta, respostaArquivadas] = await Promise.all([
+        requisicaoAdmin("/dashboard/admin/overview"),
+        requisicaoAdmin("/dashboard/admin/archived-establishments"),
+      ]);
 
-      if (!resposta) return;
+      if (!resposta || !respostaArquivadas) return;
 
-      setDados((await resposta.json()) as AdminOverview);
+      const resumo = (await resposta.json()) as Omit<
+        AdminOverview,
+        "empresas_arquivadas"
+      >;
+      const arquivadas = (await respostaArquivadas.json()) as {
+        empresas: AdminOverview["empresas_arquivadas"];
+      };
+
+      setDados({ ...resumo, empresas_arquivadas: arquivadas.empresas });
       setErro("");
     } catch (error) {
       setErro(
@@ -296,40 +313,42 @@ export default function AdminPage() {
     }
   }
 
-  async function excluirEmpresa(empresaId: number, nome: string) {
-    const confirmado = window.confirm(
-      `Excluir ${nome}? Isso também apagará os QR Codes e o histórico de acessos dessa empresa.`,
+  async function arquivarEmpresa(empresaId: number, nome: string) {
+    const nomeConfirmado = window.prompt(
+      `Arquivar ${nome}? Os QR Codes e a tag NFC deixarão de redirecionar até a restauração.\n\nDigite o nome da empresa para confirmar:`,
     );
 
-    if (!confirmado) return;
+    if (nomeConfirmado?.trim() !== nome) return;
 
     setProcessandoAcao(true);
     setMensagemGerenciamento("");
 
     try {
       const resposta = await requisicaoAdmin(
-        `/dashboard/admin/establishments/${empresaId}`,
-        { method: "DELETE" },
+        `/dashboard/admin/establishments/${empresaId}/archive`,
+        { method: "POST" },
       );
 
       if (!resposta) return;
 
-      setMensagemGerenciamento("Empresa excluída com sucesso.");
+      setMensagemGerenciamento(
+        `${nome} foi arquivada. Seus QR Codes e NFC estão pausados até a restauração.`,
+      );
       setQrSelecionado(null);
       setQrImagemUrl("");
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível excluir a empresa.",
+        error instanceof Error ? error.message : "Não foi possível arquivar a empresa.",
       );
     } finally {
       setProcessandoAcao(false);
     }
   }
 
-  async function resetarAcessos(empresaId: number, nome: string) {
+  async function restaurarEmpresa(empresaId: number, nome: string) {
     const confirmado = window.confirm(
-      `Zerar os acessos de ${nome}? Isso apagará permanentemente as leituras QR/NFC e manterá a empresa, o QR Code, o link e o login intactos.`,
+      `Restaurar ${nome}? Os QR Codes e a tag NFC voltarão a respeitar seus estados individuais.`,
     );
 
     if (!confirmado) return;
@@ -339,22 +358,50 @@ export default function AdminPage() {
 
     try {
       const resposta = await requisicaoAdmin(
-        `/dashboard/admin/establishments/${empresaId}/reset-accesses`,
+        `/dashboard/admin/establishments/${empresaId}/restore`,
         { method: "POST" },
       );
 
       if (!resposta) return;
 
-      const resultado = (await resposta.json()) as {
-        acessos_excluidos: number;
-      };
+      setMensagemGerenciamento(`${nome} foi restaurada com sucesso.`);
+      await carregarPainelAdmin();
+    } catch (error) {
       setMensagemGerenciamento(
-        `${resultado.acessos_excluidos} acesso(s) zerado(s) para ${nome}.`,
+        error instanceof Error ? error.message : "Não foi possível restaurar a empresa.",
+      );
+    } finally {
+      setProcessandoAcao(false);
+    }
+  }
+
+  async function iniciarNovoPeriodo(empresaId: number, nome: string) {
+    const confirmado = window.confirm(
+      `Iniciar um novo período para ${nome}? Os acessos antigos serão preservados, mas os cartões passarão a contar a partir de agora.`,
+    );
+
+    if (!confirmado) return;
+
+    setProcessandoAcao(true);
+    setMensagemGerenciamento("");
+
+    try {
+      const resposta = await requisicaoAdmin(
+        `/dashboard/admin/establishments/${empresaId}/start-stats-period`,
+        { method: "POST" },
+      );
+
+      if (!resposta) return;
+
+      setMensagemGerenciamento(
+        `Novo período iniciado para ${nome}. O histórico anterior foi preservado.`,
       );
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível zerar os acessos.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível iniciar um novo período.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -439,9 +486,9 @@ export default function AdminPage() {
 
         <section className={styles.metrics} aria-label="Resumo da operação">
           <article className={styles.metricCard}>
-            <span>Empresas</span>
+            <span>Empresas ativas</span>
             <strong>{indicadores.total_empresas}</strong>
-            <small>Estabelecimentos cadastrados</small>
+            <small>Estabelecimentos disponíveis</small>
           </article>
           <article className={styles.metricCard}>
             <span>Acessos totais</span>
@@ -535,7 +582,7 @@ export default function AdminPage() {
             <div className={styles.panelHeading}>
               <div>
                 <p className={styles.eyebrow}>Carteira</p>
-                <h2>Empresas cadastradas</h2>
+                <h2>Empresas ativas</h2>
               </div>
               <span className={styles.totalLabel}>{dados.empresas.length} empresas</span>
             </div>
@@ -656,17 +703,17 @@ export default function AdminPage() {
                           </span>
                           <button
                             className={styles.dangerButton}
-                            onClick={() => resetarAcessos(empresa.id, empresa.nome)}
+                            onClick={() => iniciarNovoPeriodo(empresa.id, empresa.nome)}
                             disabled={processandoAcao}
                           >
-                            Zerar acessos
+                            Iniciar novo período
                           </button>
                           <button
                             className={styles.dangerButton}
-                            onClick={() => excluirEmpresa(empresa.id, empresa.nome)}
+                            onClick={() => arquivarEmpresa(empresa.id, empresa.nome)}
                             disabled={processandoAcao}
                           >
-                            Excluir
+                            Arquivar
                           </button>
                         </td>
                       </tr>
@@ -708,6 +755,45 @@ export default function AdminPage() {
                 {mensagemGerenciamento}
               </p>
             )}
+          </article>
+
+          <article className={styles.panel}>
+            <div className={styles.panelHeading}>
+              <div>
+                <p className={styles.eyebrow}>Histórico operacional</p>
+                <h2>Empresas arquivadas</h2>
+              </div>
+              <span className={styles.totalLabel}>
+                {dados.empresas_arquivadas.length} empresas
+              </span>
+            </div>
+
+            {dados.empresas_arquivadas.length === 0 ? (
+              <p className={styles.emptyState}>Nenhuma empresa arquivada.</p>
+            ) : (
+              <div className={styles.archivedList}>
+                {dados.empresas_arquivadas.map((empresa) => (
+                  <div className={styles.archivedRow} key={empresa.id}>
+                    <div>
+                      <strong>{empresa.nome}</strong>
+                      <span>
+                        {empresa.total_qr_codes} QR/NFC · arquivada em {formatarData(empresa.arquivada_em)}
+                      </span>
+                    </div>
+                    <button
+                      className={styles.restoreButton}
+                      onClick={() => restaurarEmpresa(empresa.id, empresa.nome)}
+                      disabled={processandoAcao}
+                    >
+                      Restaurar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className={styles.operationNote}>
+              Arquivar pausa o redirecionamento dos QR Codes e tags NFC. O histórico de acessos permanece guardado.
+            </p>
           </article>
 
           <article className={styles.panel}>

@@ -369,6 +369,60 @@
   text-decoration: underline;
 }
 
+.archivedList {
+  display: grid;
+  gap: 10px;
+}
+
+.archivedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid #edf0eb;
+}
+
+.archivedRow > div {
+  display: grid;
+  gap: 4px;
+}
+
+.archivedRow span,
+.operationNote {
+  color: #8b958e;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.restoreButton {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #cfd6cf;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #238457;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.restoreButton:hover:not(:disabled) {
+  border-color: #238457;
+  background: #eaf7ef;
+}
+
+.restoreButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.operationNote {
+  margin-top: 20px;
+}
+
 .qrList {
   display: grid;
   min-width: 270px;
@@ -627,6 +681,7 @@
 .state button:focus-visible,
 .stateActions a:focus-visible,
 .secondaryButton:focus-visible,
+.restoreButton:focus-visible,
 .logoutButton:focus-visible,
 .textButton:focus-visible,
 .dangerButton:focus-visible,

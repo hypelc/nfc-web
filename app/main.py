@@ -37,7 +37,10 @@ def acessar_qr_code(codigo: str, source: str = "qr"): # A função recebe o par�
                 """
                 SELECT id, destination_url
                 FROM qr_codes
-                WHERE code = %s AND is_active = TRUE
+                JOIN establishments ON establishments.id = qr_codes.establishment_id
+                WHERE code = %s
+                  AND qr_codes.is_active = TRUE
+                  AND establishments.archived_at IS NULL
                 """,
                 (codigo,),
             )
