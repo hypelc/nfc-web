@@ -1,5 +1,6 @@
 import io
 import secrets
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 import qrcode
@@ -13,6 +14,59 @@ from app.database import abrir_conexao
 
 
 router = APIRouter()
+
+ESTATISTICAS_TIMEZONE = "America/Sao_Paulo"
+
+
+def _obter_referencia_estatisticas() -> datetime:
+    """Retorna uma única referência UTC para todos os cálculos do painel."""
+
+    return datetime.now(timezone.utc)
+
+
+def _consultar_serie_temporal(cursor, establishment_id: int, referencia: datetime):
+    """Consulta os 30 dias locais mais recentes, preenchendo dias vazios."""
+
+    cursor.execute(
+        f"""
+        WITH parametros AS (
+            SELECT
+                e.id AS establishment_id,
+                e.stats_start_at,
+                (
+                    (%s::timestamptz AT TIME ZONE '{ESTATISTICAS_TIMEZONE}')::date
+                ) AS hoje_local
+            FROM establishments e
+            WHERE e.id = %s
+        ), dias AS (
+            SELECT
+                (p.hoje_local - deslocamento.n)::date AS dia,
+                p.establishment_id,
+                p.stats_start_at
+            FROM parametros p
+            CROSS JOIN generate_series(0, 29) AS deslocamento(n)
+        )
+        SELECT
+            d.dia,
+            COUNT(ae.id) AS acessos
+        FROM dias d
+        LEFT JOIN qr_codes qc
+            ON qc.establishment_id = d.establishment_id
+        LEFT JOIN access_events ae
+            ON ae.qr_code_id = qc.id
+            AND ae.accessed_at >= d.stats_start_at
+            AND ae.accessed_at >= (
+                d.dia::timestamp AT TIME ZONE '{ESTATISTICAS_TIMEZONE}'
+            )
+            AND ae.accessed_at < (
+                (d.dia + 1)::timestamp AT TIME ZONE '{ESTATISTICAS_TIMEZONE}'
+            )
+        GROUP BY d.dia
+        ORDER BY d.dia
+        """,
+        (referencia, establishment_id),
+    )
+    return cursor.fetchall()
 
 
 class CadastroEmpresaRequest(BaseModel):
@@ -616,6 +670,9 @@ def obter_resumo_dashboard(
 
     with abrir_conexao() as conexao:
         with conexao.cursor() as cursor:
+            cursor.execute(
+                "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
+            )
             role, client_establishment_id = _obter_conta_dashboard(
                 cursor,
                 usuario["id"],
@@ -679,18 +736,11 @@ def obter_resumo_dashboard(
                     detail="O acesso desta empresa está temporariamente indisponível",
                 )
 
+            referencia_estatisticas = _obter_referencia_estatisticas()
+
             cursor.execute(
                 """
                 SELECT
-                    COUNT(*) FILTER (
-                        WHERE ae.accessed_at >= GREATEST(e.stats_start_at, CURRENT_DATE)
-                    ) AS acessos_hoje,
-                    COUNT(*) FILTER (
-                        WHERE ae.accessed_at >= GREATEST(
-                            e.stats_start_at,
-                            CURRENT_DATE - INTERVAL '6 days'
-                        )
-                    ) AS acessos_ultimos_7_dias,
                     COUNT(ae.id) AS total_acessos,
                     COUNT(*) FILTER (
                         WHERE ae.source = 'qr'
@@ -709,6 +759,12 @@ def obter_resumo_dashboard(
                 (establishment_id,),
             )
             estatisticas = cursor.fetchone()
+
+            serie_bruta = _consultar_serie_temporal(
+                cursor,
+                establishment_id,
+                referencia_estatisticas,
+            )
 
             cursor.execute(
                 """
@@ -738,13 +794,21 @@ def obter_resumo_dashboard(
             acessos_recentes = cursor.fetchall()
 
     (
-        acessos_hoje,
-        acessos_ultimos_7_dias,
         total_acessos,
         acessos_qr,
         acessos_nfc,
         ultimo_acesso,
     ) = estatisticas
+
+    serie_temporal_30 = [
+        {"data": dia, "acessos": acessos or 0}
+        for dia, acessos in serie_bruta
+    ]
+    serie_temporal_7 = serie_temporal_30[-7:]
+    acessos_hoje = serie_temporal_30[-1]["acessos"]
+    acessos_ultimos_7_dias = sum(
+        ponto["acessos"] for ponto in serie_temporal_7
+    )
 
     qr_atual = None
     if qr_code is not None:
@@ -770,6 +834,10 @@ def obter_resumo_dashboard(
             "acessos_nfc": acessos_nfc,
             "ultimo_acesso": ultimo_acesso,
         },
+        "serie_temporal": {
+            "7_dias": serie_temporal_7,
+            "30_dias": serie_temporal_30,
+        },
         "qr_atual": qr_atual,
         "acessos_recentes": [
             {
@@ -790,8 +858,20 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
         with conexao.cursor() as cursor:
             _exigir_admin(cursor, usuario["id"])
 
+            referencia_estatisticas = _obter_referencia_estatisticas()
+
             cursor.execute(
-                """
+                f"""
+                WITH parametros AS (
+                    SELECT (
+                        (
+                            (
+                                (%s::timestamptz AT TIME ZONE '{ESTATISTICAS_TIMEZONE}')::date
+                                - 6
+                            )::timestamp AT TIME ZONE '{ESTATISTICAS_TIMEZONE}'
+                        )
+                    ) AS inicio_7_dias
+                )
                 SELECT
                     e.id,
                     e.name,
@@ -801,7 +881,10 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
                     ) AS qr_codes_ativos,
                     COUNT(ae.id) AS total_acessos,
                     COUNT(ae.id) FILTER (
-                        WHERE ae.accessed_at >= CURRENT_DATE - INTERVAL '6 days'
+                        WHERE ae.accessed_at >= GREATEST(
+                            e.stats_start_at,
+                            p.inicio_7_dias
+                        )
                     ) AS acessos_ultimos_7_dias,
                     COUNT(ae.id) FILTER (
                         WHERE ae.source = 'qr'
@@ -815,10 +898,12 @@ def obter_resumo_admin(usuario: dict = Depends(obter_usuario_atual)):
                 LEFT JOIN access_events ae
                     ON ae.qr_code_id = qc.id
                     AND ae.accessed_at >= e.stats_start_at
+                CROSS JOIN parametros p
                 WHERE e.archived_at IS NULL
                 GROUP BY e.id, e.name, e.stats_start_at
                 ORDER BY e.name
-                """
+                """,
+                (referencia_estatisticas,),
             )
             empresas = cursor.fetchall()
 
