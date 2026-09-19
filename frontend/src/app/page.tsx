@@ -1,10 +1,12 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+import ThemeToggle from "./components/ThemeToggle";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -36,9 +38,19 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <section className={styles.introduction} aria-label="Sobre o NL NFC">
-        <div className={styles.brand}>
-          <span className={styles.brandMark}>NL</span>
-          <span>NFC</span>
+        <div className={styles.introductionHeader}>
+          <div className={styles.brand}>
+            <Image
+              className={styles.brandLogo}
+              src="/brand/nl-white-transparent.png"
+              alt="NL"
+              width={490}
+              height={212}
+              priority
+            />
+            <span>NFC</span>
+          </div>
+          <ThemeToggle variant="onIntro" />
         </div>
 
         <div className={styles.introductionContent}>

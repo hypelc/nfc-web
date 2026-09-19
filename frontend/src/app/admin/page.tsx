@@ -7,6 +7,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 
+import ThemeToggle from "../components/ThemeToggle";
 import styles from "./page.module.css";
 
 type AdminOverview = {
@@ -457,12 +458,19 @@ export default function AdminPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>NL</span>
-          <span>NFC</span>
+          <Image
+            className={styles.brandLogo}
+            src="/brand/nl-light-green-transparent.png"
+            alt="NL"
+            width={490}
+            height={212}
+            priority
+          />
           <span className={styles.adminBadge}>Administração</span>
         </div>
 
         <div className={styles.headerActions}>
+          <ThemeToggle />
           <Link className={styles.secondaryButton} href="/dashboard">
             Painel de empresa
           </Link>

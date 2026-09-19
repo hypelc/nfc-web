@@ -2,8 +2,8 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
-  background: #f4f5f0;
-  color: #18231e;
+  background: var(--background);
+  color: var(--text-strong);
 }
 
 .introduction {
@@ -13,9 +13,16 @@
   justify-content: space-between;
   padding: 42px clamp(32px, 7vw, 112px) 36px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
-    #17382c;
-  color: #f4f5f0;
+    linear-gradient(135deg, var(--intro-highlight), transparent 42%),
+    var(--intro-bg);
+  color: var(--intro-text);
+}
+
+.introductionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .brand {
@@ -28,15 +35,10 @@
   text-transform: uppercase;
 }
 
-.brandMark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(244, 245, 240, 0.6);
-  border-radius: 50%;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+.brandLogo {
+  display: block;
+  width: 58px;
+  height: auto;
 }
 
 .introductionContent {
@@ -46,7 +48,7 @@
 
 .eyebrow {
   margin-bottom: 16px;
-  color: #d8ad42;
+  color: var(--gold);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -65,13 +67,13 @@
 
 .description {
   max-width: 430px;
-  color: rgba(244, 245, 240, 0.72);
+  color: var(--intro-muted);
   font-size: 17px;
   line-height: 1.65;
 }
 
 .footerNote {
-  color: rgba(244, 245, 240, 0.56);
+  color: var(--intro-faint);
   font-size: 12px;
 }
 
@@ -87,10 +89,10 @@
   width: min(100%, 420px);
   gap: 22px;
   padding: clamp(28px, 5vw, 48px);
-  border: 1px solid #dfe2da;
+  border: 1px solid var(--border);
   border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 24px 70px rgba(28, 50, 39, 0.08);
+  background: var(--surface);
+  box-shadow: 0 24px 70px var(--shadow);
 }
 
 .loginCard h2 {
@@ -101,7 +103,7 @@
 }
 
 .formDescription {
-  color: #68736d;
+  color: var(--text-muted);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -109,7 +111,7 @@
 .loginCard label {
   display: grid;
   gap: 8px;
-  color: #36443d;
+  color: var(--text-control);
   font-size: 13px;
   font-weight: 700;
 }
@@ -118,10 +120,10 @@
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
-  border: 1px solid #cfd6cf;
+  border: 1px solid var(--border-strong);
   border-radius: 9px;
-  background: #fbfcfa;
-  color: #18231e;
+  background: var(--surface-muted);
+  color: var(--text-strong);
   font: inherit;
   font-weight: 400;
   outline: none;
@@ -129,8 +131,8 @@
 }
 
 .loginCard input:focus {
-  border-color: #238457;
-  box-shadow: 0 0 0 3px rgba(35, 132, 87, 0.14);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .loginCard button {
@@ -138,8 +140,8 @@
   margin-top: 4px;
   border: 0;
   border-radius: 9px;
-  background: #238457;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
   font: inherit;
   font-weight: 700;
@@ -147,12 +149,12 @@
 }
 
 .loginCard button:hover:not(:disabled) {
-  background: #1b6d47;
+  background: var(--accent-strong);
   transform: translateY(-1px);
 }
 
 .loginCard button:focus-visible {
-  outline: 3px solid rgba(35, 132, 87, 0.28);
+  outline: 3px solid var(--focus-outline);
   outline-offset: 3px;
 }
 
@@ -162,7 +164,7 @@
 }
 
 .message {
-  color: #54635a;
+  color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -174,11 +176,11 @@
 
   .introduction {
     min-height: auto;
-    padding: 28px 24px 42px;
+    padding: 28px 24px 38px;
   }
 
   .introductionContent {
-    padding: 72px 0 28px;
+    padding: 64px 0 28px;
   }
 
   .introduction h1 {
@@ -188,6 +190,53 @@
   .loginArea {
     min-height: auto;
     padding: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .introduction {
+    padding: 22px 18px 32px;
+  }
+
+  .introductionHeader {
+    gap: 12px;
+  }
+
+  .brand {
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .brandLogo {
+    width: 52px;
+  }
+
+  .introductionContent {
+    padding: 52px 0 22px;
+  }
+
+  .introduction h1 {
+    margin-bottom: 18px;
+    font-size: clamp(40px, 12vw, 54px);
+  }
+
+  .description {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .loginArea {
+    padding: 18px 16px 28px;
+  }
+
+  .loginCard {
+    gap: 20px;
+    padding: 24px 20px;
+    border-radius: 14px;
+  }
+
+  .loginCard h2 {
+    font-size: 30px;
   }
 }
 

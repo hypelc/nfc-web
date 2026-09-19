@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+import ThemeToggle from "../components/ThemeToggle";
 import styles from "./page.module.css";
 
 type DashboardData = {
@@ -236,12 +238,20 @@ export default function DashboardPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <span className={styles.brandMark}>NL</span>
+          <Image
+            className={styles.brandLogo}
+            src="/brand/nl-light-green-transparent.png"
+            alt="NL"
+            width={490}
+            height={212}
+            priority
+          />
           <span>NFC</span>
         </div>
 
           <div className={styles.headerActions}>
             <span className={styles.clientName}>{dados.empresa.nome}</span>
+            <ThemeToggle />
             {role === "admin" && (
               <button
                 className={styles.adminButton}

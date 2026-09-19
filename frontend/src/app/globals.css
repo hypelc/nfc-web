@@ -1,13 +1,82 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f5f0;
+  --foreground: #18231e;
+  --surface: #ffffff;
+  --surface-muted: #fbfcfa;
+  --surface-inset: #f4f5f0;
+  --surface-accent: #eaf7ef;
+  --surface-accent-hover: #dff1e7;
+  --surface-warning: #fff5d9;
+  --surface-danger: #fbeaea;
+  --text-strong: #18231e;
+  --text-heading: #17382c;
+  --text-secondary: #526057;
+  --text-control: #36443d;
+  --text-muted: #68736d;
+  --text-faint: #8b958e;
+  --text-subtle: #9aa39d;
+  --text-soft: #a2ada5;
+  --border: #dfe2da;
+  --border-strong: #cfd6cf;
+  --border-accent: #b9ddc8;
+  --divider: #edf0eb;
+  --accent: #238457;
+  --accent-strong: #1b6d47;
+  --accent-ink: #1d7048;
+  --gold: #d8ad42;
+  --warning-ink: #9b7515;
+  --danger-ink: #a74444;
+  --danger-strong: #843838;
+  --on-accent: #ffffff;
+  --intro-bg: #17382c;
+  --intro-text: #f4f5f0;
+  --intro-muted: rgba(244, 245, 240, 0.72);
+  --intro-faint: rgba(244, 245, 240, 0.56);
+  --intro-highlight: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(28, 50, 39, 0.08);
+  --focus-ring: rgba(35, 132, 87, 0.14);
+  --focus-outline: rgba(35, 132, 87, 0.28);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #121917;
+  --foreground: #edf4ef;
+  --surface: #1c2521;
+  --surface-muted: #222e29;
+  --surface-inset: #171f1c;
+  --surface-accent: #20382c;
+  --surface-accent-hover: #2b4938;
+  --surface-warning: #3b321f;
+  --surface-danger: #3c282a;
+  --text-strong: #edf4ef;
+  --text-heading: #f1f6f2;
+  --text-secondary: #c1cdc5;
+  --text-control: #e1eae4;
+  --text-muted: #adbab1;
+  --text-faint: #92a198;
+  --text-subtle: #a2afa7;
+  --text-soft: #a9b8ae;
+  --border: #34413a;
+  --border-strong: #45544b;
+  --border-accent: #4f8063;
+  --divider: #2b3631;
+  --accent: #4fbb7a;
+  --accent-strong: #77d59c;
+  --accent-ink: #a5e3bb;
+  --gold: #d7b15b;
+  --warning-ink: #efcc76;
+  --danger-ink: #ed9da0;
+  --danger-strong: #ffc0c3;
+  --on-accent: #092116;
+  --intro-bg: #102b21;
+  --intro-text: #f4f8f5;
+  --intro-muted: rgba(244, 248, 245, 0.74);
+  --intro-faint: rgba(244, 248, 245, 0.6);
+  --intro-highlight: rgba(255, 255, 255, 0.08);
+  --shadow: rgba(0, 0, 0, 0.28);
+  --focus-ring: rgba(88, 191, 135, 0.36);
+  --focus-outline: rgba(88, 191, 135, 0.5);
 }
 
 html {
@@ -18,6 +87,7 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  background: var(--background);
 }
 
 body {
@@ -40,10 +110,4 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
 }

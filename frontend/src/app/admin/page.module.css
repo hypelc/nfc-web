@@ -1,7 +1,7 @@
 .page {
   min-height: 100vh;
-  background: #f4f5f0;
-  color: #18231e;
+  background: var(--background);
+  color: var(--text-strong);
 }
 
 .header,
@@ -15,11 +15,12 @@
 }
 
 .header {
+  align-items: center;
   justify-content: space-between;
   min-height: 76px;
   padding: 0 clamp(24px, 5vw, 72px);
-  border-bottom: 1px solid #dfe2da;
-  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .brand {
@@ -30,24 +31,18 @@
   text-transform: uppercase;
 }
 
-.brandMark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 50%;
-  background: #17382c;
-  color: #f4f5f0;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+.brandLogo {
+  display: block;
+  width: 58px;
+  height: auto;
 }
 
 .adminBadge {
   margin-left: 8px;
   padding: 7px 10px;
-  border: 1px solid #b9ddc8;
+  border: 1px solid var(--border-accent);
   border-radius: 999px;
-  color: #1d7048;
+  color: var(--accent-ink);
   font-size: 10px;
   letter-spacing: 0.08em;
 }
@@ -60,19 +55,20 @@
 .logoutButton {
   min-height: 38px;
   padding: 0 13px;
-  border: 1px solid #cfd6cf;
+  border: 1px solid var(--border-strong);
   border-radius: 7px;
   background: transparent;
-  color: #36443d;
+  color: var(--text-control);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .secondaryButton:hover,
 .logoutButton:hover {
-  border-color: #238457;
-  color: #238457;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .content {
@@ -82,6 +78,7 @@
 }
 
 .heading {
+  align-items: flex-end;
   justify-content: space-between;
   gap: 28px;
   margin-bottom: 36px;
@@ -89,7 +86,7 @@
 
 .eyebrow {
   margin-bottom: 10px;
-  color: #238457;
+  color: var(--accent);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -105,17 +102,17 @@
 }
 
 .heading p:not(.eyebrow) {
-  color: #68736d;
+  color: var(--text-muted);
   font-size: 15px;
 }
 
 .liveStatus {
-  align-self: flex-start;
+  align-self: flex-end;
   padding: 9px 12px;
-  border: 1px solid #b9ddc8;
+  border: 1px solid var(--border-accent);
   border-radius: 999px;
-  background: #eaf7ef;
-  color: #1d7048;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -129,9 +126,9 @@
 
 .metricCard,
 .panel {
-  border: 1px solid #dfe2da;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .metricCard {
@@ -142,25 +139,25 @@
 }
 
 .metricCard > span {
-  color: #68736d;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 .metricCard strong {
-  color: #17382c;
+  color: var(--text-heading);
   font-size: clamp(30px, 3vw, 42px);
   font-weight: 600;
   letter-spacing: -0.06em;
 }
 
 .metricCard strong em {
-  color: #a2ada5;
+  color: var(--text-soft);
   font-size: 20px;
   font-style: normal;
 }
 
 .metricCard small {
-  color: #9aa39d;
+  color: var(--text-subtle);
   font-size: 11px;
 }
 
@@ -194,7 +191,7 @@
 }
 
 .totalLabel {
-  color: #9aa39d;
+  color: var(--text-subtle);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -208,7 +205,7 @@
 .actionForm label {
   display: grid;
   gap: 7px;
-  color: #36443d;
+  color: var(--text-control);
   font-size: 12px;
   font-weight: 700;
 }
@@ -216,26 +213,26 @@
 .actionForm input {
   min-height: 42px;
   padding: 0 12px;
-  border: 1px solid #cfd6cf;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #fbfcfa;
-  color: #18231e;
+  background: var(--surface-muted);
+  color: var(--text-strong);
   font: inherit;
   font-size: 13px;
   outline: none;
 }
 
 .actionForm input:focus {
-  border-color: #238457;
-  box-shadow: 0 0 0 3px rgba(35, 132, 87, 0.14);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .actionForm button {
-  min-height: 42px;
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
-  background: #238457;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -243,7 +240,7 @@
 }
 
 .actionForm button:hover:not(:disabled) {
-  background: #1b6d47;
+  background: var(--accent-strong);
 }
 
 .actionForm button:disabled {
@@ -252,7 +249,7 @@
 }
 
 .actionMessage {
-  color: #1d7048;
+  color: var(--accent-ink);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -262,14 +259,14 @@
   gap: 10px;
   padding: 18px;
   border-radius: 10px;
-  background: #eaf7ef;
-  color: #1d7048;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .resultCard strong {
-  color: #17382c;
+  color: var(--text-heading);
   font-size: 16px;
 }
 
@@ -278,7 +275,7 @@
 }
 
 .resultCard small {
-  color: #526057;
+  color: var(--text-secondary);
   font-size: 11px;
 }
 
@@ -302,7 +299,7 @@
 
 .companyTable th {
   padding: 0 12px 12px 0;
-  color: #8b958e;
+  color: var(--text-faint);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -312,8 +309,8 @@
 
 .companyTable td {
   padding: 15px 12px 15px 0;
-  border-top: 1px solid #edf0eb;
-  color: #526057;
+  border-top: 1px solid var(--divider);
+  color: var(--text-secondary);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -345,11 +342,11 @@
 
 .textButton {
   margin-top: 6px;
-  color: #238457;
+  color: var(--accent);
 }
 
 .textButton:hover:not(:disabled) {
-  color: #1b6d47;
+  color: var(--accent-strong);
   text-decoration: underline;
 }
 
@@ -361,11 +358,11 @@
 
 .dangerButton {
   margin-top: 10px;
-  color: #a74444;
+  color: var(--danger-ink);
 }
 
 .dangerButton:hover:not(:disabled) {
-  color: #843838;
+  color: var(--danger-strong);
   text-decoration: underline;
 }
 
@@ -380,7 +377,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 0;
-  border-top: 1px solid #edf0eb;
+  border-top: 1px solid var(--divider);
 }
 
 .archivedRow > div {
@@ -390,7 +387,7 @@
 
 .archivedRow span,
 .operationNote {
-  color: #8b958e;
+  color: var(--text-faint);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -398,10 +395,10 @@
 .restoreButton {
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid #cfd6cf;
+  border: 1px solid var(--border-strong);
   border-radius: 7px;
-  background: #ffffff;
-  color: #238457;
+  background: var(--surface);
+  color: var(--accent);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -410,8 +407,8 @@
 }
 
 .restoreButton:hover:not(:disabled) {
-  border-color: #238457;
-  background: #eaf7ef;
+  border-color: var(--accent);
+  background: var(--surface-accent);
 }
 
 .restoreButton:disabled {
@@ -433,13 +430,13 @@
   display: grid;
   gap: 3px;
   padding: 8px 9px;
-  border: 1px solid #edf0eb;
+  border: 1px solid var(--divider);
   border-radius: 7px;
-  background: #fbfcfa;
+  background: var(--surface-muted);
 }
 
 .qrCodeLabel {
-  color: #526057;
+  color: var(--text-secondary);
   font-family: var(--font-geist-mono), monospace;
   font-size: 10px;
   font-weight: 700;
@@ -466,10 +463,10 @@
   width: 100%;
   min-height: 30px;
   padding: 0 7px;
-  border: 1px solid #cfd6cf;
+  border: 1px solid var(--border-strong);
   border-radius: 5px;
-  background: #ffffff;
-  color: #18231e;
+  background: var(--surface);
+  color: var(--text-strong);
   font: inherit;
   font-size: 11px;
   outline: none;
@@ -485,8 +482,8 @@
   padding: 5px 7px;
   border: 0;
   border-radius: 5px;
-  background: #238457;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
   font: inherit;
   font-size: 10px;
@@ -504,9 +501,9 @@
   min-height: 250px;
   gap: 10px;
   padding: 16px;
-  border: 1px solid #edf0eb;
+  border: 1px solid var(--divider);
   border-radius: 10px;
-  background: #fbfcfa;
+  background: var(--surface-muted);
 }
 
 .qrPreview .eyebrow {
@@ -515,7 +512,7 @@
 
 .qrPreview h3 {
   overflow-wrap: anywhere;
-  color: #17382c;
+  color: var(--text-heading);
   font-family: var(--font-geist-mono), monospace;
   font-size: 13px;
 }
@@ -525,39 +522,42 @@
   height: 150px;
   justify-self: center;
   padding: 8px;
-  border: 1px solid #dfe2da;
-  background: #ffffff;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .qrPreview > span {
   overflow-wrap: anywhere;
-  color: #8b958e;
+  color: var(--text-faint);
   font-size: 10px;
   line-height: 1.4;
 }
 
 .downloadButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
   width: max-content;
   padding: 7px 9px;
   border-radius: 6px;
-  background: #238457;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 700;
 }
 
 .downloadButton:hover {
-  background: #1b6d47;
+  background: var(--accent-strong);
 }
 
 .companyTable td strong {
-  color: #18231e;
+  color: var(--text-strong);
   font-size: 13px;
 }
 
 .companyTable td small {
   margin-top: 4px;
-  color: #9aa39d;
+  color: var(--text-subtle);
   font-size: 10px;
 }
 
@@ -571,13 +571,13 @@
 }
 
 .activeTag {
-  background: #eaf7ef;
-  color: #1d7048;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
 }
 
 .inactiveTag {
-  background: #fbeaea;
-  color: #a74444;
+  background: var(--surface-danger);
+  color: var(--danger-ink);
 }
 
 .accessList {
@@ -587,7 +587,7 @@
 .accessRow {
   gap: 11px;
   padding: 14px 0;
-  border-top: 1px solid #edf0eb;
+  border-top: 1px solid var(--divider);
 }
 
 .sourceIcon {
@@ -597,15 +597,15 @@
   flex: 0 0 auto;
   place-items: center;
   border-radius: 9px;
-  background: #eaf7ef;
-  color: #1d7048;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
   font-size: 9px;
   font-weight: 800;
 }
 
 .nfcIcon {
-  background: #fff5d9;
-  color: #9b7515;
+  background: var(--surface-warning);
+  color: var(--warning-ink);
 }
 
 .accessRow div {
@@ -629,7 +629,7 @@
 
 .accessRow div span,
 .accessRow time {
-  color: #8b958e;
+  color: var(--text-faint);
   font-size: 10px;
 }
 
@@ -639,7 +639,7 @@
 }
 
 .emptyState {
-  color: #8b958e;
+  color: var(--text-faint);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -650,8 +650,8 @@
   place-items: center;
   gap: 16px;
   padding: 24px;
-  background: #f4f5f0;
-  color: #526057;
+  background: var(--background);
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -665,15 +665,15 @@
   padding: 10px 16px;
   border: 0;
   border-radius: 8px;
-  background: #238457;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
   font: inherit;
   font-weight: 700;
 }
 
 .stateActions a {
-  color: #238457;
+  color: var(--accent);
   font-size: 13px;
   font-weight: 700;
 }
@@ -690,7 +690,7 @@
 .inlineForm button:focus-visible,
 .inlineQrForm button:focus-visible,
 .downloadButton:focus-visible {
-  outline: 3px solid #b9ddc8;
+  outline: 3px solid var(--border-accent);
   outline-offset: 2px;
 }
 
@@ -718,19 +718,40 @@
 @media (max-width: 600px) {
   .header {
     min-height: 68px;
-    padding: 0 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
   .brand {
+    flex: 0 0 auto;
+    gap: 8px;
+    font-size: 13px;
     letter-spacing: 0.12em;
+  }
+
+  .brandLogo {
+    width: 52px;
   }
 
   .adminBadge {
     display: none;
   }
 
-  .secondaryButton {
-    display: none;
+  .headerActions {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  .secondaryButton,
+  .logoutButton {
+    min-height: 40px;
+    padding: 0 9px;
+    font-size: 12px;
   }
 
   .content {
@@ -738,10 +759,12 @@
   }
 
   .heading {
+    align-items: stretch;
     display: block;
   }
 
   .liveStatus {
+    align-self: flex-start;
     display: inline-block;
     margin-top: 22px;
   }
@@ -751,11 +774,67 @@
   }
 
   .metricCard {
+    min-width: 0;
     min-height: 132px;
     padding: 17px;
   }
 
   .panel {
+    min-height: auto;
     padding: 20px;
+  }
+
+  .panelHeading {
+    align-items: flex-start;
+  }
+
+  .actionForm {
+    max-width: none;
+  }
+
+  .actionForm input,
+  .actionForm button {
+    min-height: 46px;
+  }
+
+  .companyManagementGrid {
+    gap: 18px;
+  }
+
+  .tableWrapper {
+    margin-right: -4px;
+    padding-bottom: 6px;
+    overscroll-behavior-inline: contain;
+  }
+
+  .qrPreview {
+    max-width: none;
+    min-height: 220px;
+  }
+
+  .archivedRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .restoreButton {
+    min-height: 40px;
+  }
+
+  .qrActions {
+    gap: 6px 12px;
+  }
+
+  .textButton,
+  .dangerButton {
+    min-height: 32px;
+    padding: 4px 0;
+  }
+
+  .inlineForm button,
+  .inlineQrForm button {
+    min-height: 36px;
+    padding: 0 10px;
   }
 }
