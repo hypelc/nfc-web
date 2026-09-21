@@ -1,0 +1,329 @@
+.panel {
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 26px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.noPrint {
+  /* Controls and the optional data table are useful on screen only. */
+}
+
+.heading,
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.eyebrow {
+  margin-bottom: 10px;
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  font-size: 21px;
+  letter-spacing: -0.04em;
+}
+
+.subtitle,
+.dateRange,
+.note,
+.empty,
+.unavailable p {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.subtitle {
+  margin-top: 6px;
+}
+
+.periods {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.periods button {
+  min-width: 78px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.periods button[aria-pressed="true"] {
+  border-color: var(--border-accent);
+  background: var(--surface-accent);
+  color: var(--accent-ink);
+}
+
+.periods button:hover {
+  color: var(--accent-ink);
+}
+
+.panel button:focus-visible,
+.panel select:focus-visible,
+.details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.summary {
+  margin: 28px 0 24px;
+}
+
+.total {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.total strong {
+  margin-right: 5px;
+  color: var(--text-heading);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+.dateRange {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.dayPicker {
+  display: grid;
+  gap: 6px;
+}
+.dayPicker label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.dayPicker select {
+  min-height: 44px;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-rows: 236px auto;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+
+.axis {
+  position: relative;
+  min-width: 24px;
+  margin-block: 8px;
+  font-size: 11px;
+}
+.axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.axis::before {
+  content: "0";
+  visibility: hidden;
+}
+.plot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  cursor: crosshair;
+}
+.gridLine {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.dataLine {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.marker {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+.xAxis {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.selectedDay {
+  margin-top: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.selectedDay span {
+  padding-inline: 8px;
+}
+.selectedDay strong {
+  color: var(--text-heading);
+}
+.empty {
+  margin-top: 10px;
+}
+
+.details {
+  margin-top: 20px;
+  border-top: 1px solid var(--divider);
+}
+.details summary {
+  display: list-item;
+  min-height: 44px;
+  padding-block: 14px;
+  color: var(--accent-ink);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tableContainer {
+  max-height: 280px;
+  overflow: auto;
+}
+.details table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.details caption {
+  padding-bottom: 12px;
+  text-align: left;
+  font-size: 12px;
+}
+.details th,
+.details td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+}
+.details td,
+.details th:last-child {
+  text-align: right;
+}
+.details tbody th {
+  font-weight: 400;
+}
+.note {
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+  font-size: 12px;
+}
+.unavailable {
+  margin-block: 24px;
+  padding: 20px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+.unavailable strong {
+  font-size: 15px;
+}
+.unavailable p {
+  max-width: 560px;
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .panel {
+    padding: 20px;
+  }
+  .heading {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .periods {
+    width: 100%;
+  }
+  .periods button {
+    flex: 1;
+  }
+  .summary {
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .dayPicker {
+    width: 100%;
+  }
+  .dayPicker select {
+    width: 100%;
+    font-size: 16px;
+  }
+  .chart {
+    grid-template-rows: 196px auto;
+    column-gap: 8px;
+  }
+  .axis {
+    margin-block: 6.65px;
+  }
+}
+
+@media print {
+  .panel {
+    margin-bottom: 14px;
+    padding: 0;
+    border: 0;
+    background: #fff;
+    color: #18231e;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+
+  .subtitle,
+  .dateRange,
+  .note,
+  .empty,
+  .selectedDay,
+  .axis span,
+  .xAxis {
+    color: #46534c;
+  }
+
+  .gridLine {
+    stroke: #dfe2da;
+  }
+
+  .dataLine {
+    stroke: #1b6d47;
+  }
+
+  .marker {
+    stroke: #68736d;
+  }
+}
