@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { isEscapeKey, restoreInlineEdit } from "@/lib/admin-editing";
 
 import ThemeToggle from "../components/ThemeToggle";
 import styles from "./page.module.css";
@@ -101,7 +102,9 @@ export default function AdminPage() {
   const [resultadoCadastro, setResultadoCadastro] =
     useState<CadastroEmpresaResponse | null>(null);
   const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
-  const [empresaEditandoId, setEmpresaEditandoId] = useState<number | null>(null);
+  const [empresaEditandoId, setEmpresaEditandoId] = useState<number | null>(
+    null,
+  );
   const [nomeEditado, setNomeEditado] = useState("");
   const [qrEditandoCodigo, setQrEditandoCodigo] = useState<string | null>(null);
   const [destinoEditado, setDestinoEditado] = useState("");
@@ -201,13 +204,16 @@ export default function AdminPage() {
     setSalvandoEmpresa(true);
 
     try {
-      const resposta = await requisicaoAdmin("/dashboard/admin/establishments", {
-        method: "POST",
-        body: JSON.stringify({
-          nome: nomeEmpresa,
-          link_avaliacao: linkAvaliacao,
-        }),
-      });
+      const resposta = await requisicaoAdmin(
+        "/dashboard/admin/establishments",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            nome: nomeEmpresa,
+            link_avaliacao: linkAvaliacao,
+          }),
+        },
+      );
 
       if (!resposta) return;
 
@@ -219,7 +225,9 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemAcao(
-        error instanceof Error ? error.message : "Não foi possível cadastrar a empresa.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível cadastrar a empresa.",
       );
     } finally {
       setSalvandoEmpresa(false);
@@ -249,7 +257,9 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível atualizar a empresa.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar a empresa.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -279,11 +289,25 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível atualizar o destino.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível atualizar o destino.",
       );
     } finally {
       setProcessandoAcao(false);
     }
+  }
+
+  function cancelarNomeEmpresa(nomeOriginal: string) {
+    const estado = restoreInlineEdit(nomeOriginal);
+    setEmpresaEditandoId(estado.activeId);
+    setNomeEditado(estado.value);
+  }
+
+  function cancelarDestinoQr(destinoOriginal: string) {
+    const estado = restoreInlineEdit(destinoOriginal);
+    setQrEditandoCodigo(estado.activeId);
+    setDestinoEditado(estado.value);
   }
 
   async function alternarQr(qrCode: QrCodeAdmin) {
@@ -307,7 +331,9 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível alterar o status.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível alterar o status.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -340,7 +366,9 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível arquivar a empresa.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível arquivar a empresa.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -369,7 +397,9 @@ export default function AdminPage() {
       await carregarPainelAdmin();
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível restaurar a empresa.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível restaurar a empresa.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -429,7 +459,9 @@ export default function AdminPage() {
       setQrImagemUrl(URL.createObjectURL(imagem));
     } catch (error) {
       setMensagemGerenciamento(
-        error instanceof Error ? error.message : "Não foi possível carregar o QR Code.",
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar o QR Code.",
       );
     } finally {
       setProcessandoAcao(false);
@@ -437,7 +469,9 @@ export default function AdminPage() {
   }
 
   if (carregando) {
-    return <main className={styles.state}>Carregando painel administrativo...</main>;
+    return (
+      <main className={styles.state}>Carregando painel administrativo...</main>
+    );
   }
 
   if (erro || !dados) {
@@ -445,7 +479,9 @@ export default function AdminPage() {
       <main className={styles.state}>
         <p>{erro || "Nenhum dado disponível."}</p>
         <div className={styles.stateActions}>
-          <button onClick={() => window.location.reload()}>Tentar novamente</button>
+          <button onClick={() => window.location.reload()}>
+            Tentar novamente
+          </button>
           <Link href="/dashboard">Voltar ao painel</Link>
         </div>
       </main>
@@ -471,7 +507,7 @@ export default function AdminPage() {
 
         <div className={styles.headerActions}>
           <ThemeToggle />
-          <Link className={styles.secondaryButton} href="/dashboard">
+          <Link className={styles.companyPanelButton} href="/dashboard">
             Painel de empresa
           </Link>
           <button className={styles.logoutButton} onClick={sair}>
@@ -486,7 +522,8 @@ export default function AdminPage() {
             <p className={styles.eyebrow}>Visão geral da operação</p>
             <h1>Painel administrativo</h1>
             <p>
-              Acompanhe empresas, QR Codes, tags NFC e o movimento geral do sistema.
+              Acompanhe empresas, QR Codes, tags NFC e o movimento geral do
+              sistema.
             </p>
           </div>
           <span className={styles.liveStatus}>● Dados atualizados</span>
@@ -572,9 +609,12 @@ export default function AdminPage() {
               <div className={styles.resultCard}>
                 <strong>{resultadoCadastro.empresa.nome}</strong>
                 <span>Código: {resultadoCadastro.qr_code.codigo}</span>
-                <span>URL pública: {resultadoCadastro.qr_code.url_publica}</span>
+                <span>
+                  URL pública: {resultadoCadastro.qr_code.url_publica}
+                </span>
                 <small>
-                  Use essa URL no QR Code e na tag NFC. O destino atual é o link de avaliação informado.
+                  Use essa URL no QR Code e na tag NFC. O destino atual é o link
+                  de avaliação informado.
                 </small>
               </div>
             ) : (
@@ -592,7 +632,9 @@ export default function AdminPage() {
                 <p className={styles.eyebrow}>Carteira</p>
                 <h2>Empresas ativas</h2>
               </div>
-              <span className={styles.totalLabel}>{dados.empresas.length} empresas</span>
+              <span className={styles.totalLabel}>
+                {dados.empresas.length} empresas
+              </span>
             </div>
 
             <div className={styles.companyManagementGrid}>
@@ -613,10 +655,21 @@ export default function AdminPage() {
                       <tr key={empresa.id}>
                         <td>
                           {empresaEditandoId === empresa.id ? (
-                            <form className={styles.inlineForm} onSubmit={salvarNomeEmpresa}>
+                            <form
+                              className={styles.inlineForm}
+                              onSubmit={salvarNomeEmpresa}
+                              onKeyDown={(event) => {
+                                if (isEscapeKey(event.key)) {
+                                  event.preventDefault();
+                                  cancelarNomeEmpresa(empresa.nome);
+                                }
+                              }}
+                            >
                               <input
                                 value={nomeEditado}
-                                onChange={(event) => setNomeEditado(event.target.value)}
+                                onChange={(event) =>
+                                  setNomeEditado(event.target.value)
+                                }
                                 minLength={2}
                                 maxLength={120}
                                 aria-label={`Novo nome de ${empresa.nome}`}
@@ -624,6 +677,16 @@ export default function AdminPage() {
                               />
                               <button type="submit" disabled={processandoAcao}>
                                 Salvar
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.cancelButton}
+                                onClick={() =>
+                                  cancelarNomeEmpresa(empresa.nome)
+                                }
+                                disabled={processandoAcao}
+                              >
+                                Cancelar
                               </button>
                             </form>
                           ) : (
@@ -645,11 +708,14 @@ export default function AdminPage() {
                         <td>
                           <div className={styles.qrList}>
                             <strong>
-                              {empresa.qr_codes_ativos}/{empresa.total_qr_codes} ativos
+                              {empresa.qr_codes_ativos}/{empresa.total_qr_codes}{" "}
+                              ativos
                             </strong>
                             {empresa.qr_codes.map((qrCode) => (
                               <div className={styles.qrItem} key={qrCode.id}>
-                                <span className={styles.qrCodeLabel}>{qrCode.codigo}</span>
+                                <span className={styles.qrCodeLabel}>
+                                  {qrCode.codigo}
+                                </span>
                                 <div className={styles.qrActions}>
                                   <button
                                     className={styles.textButton}
@@ -679,16 +745,37 @@ export default function AdminPage() {
                                   <form
                                     className={styles.inlineQrForm}
                                     onSubmit={salvarDestinoQr}
+                                    onKeyDown={(event) => {
+                                      if (isEscapeKey(event.key)) {
+                                        event.preventDefault();
+                                        cancelarDestinoQr(qrCode.destino_url);
+                                      }
+                                    }}
                                   >
                                     <input
                                       type="url"
                                       value={destinoEditado}
-                                      onChange={(event) => setDestinoEditado(event.target.value)}
+                                      onChange={(event) =>
+                                        setDestinoEditado(event.target.value)
+                                      }
                                       aria-label={`Novo link de ${qrCode.codigo}`}
                                       required
                                     />
-                                    <button type="submit" disabled={processandoAcao}>
+                                    <button
+                                      type="submit"
+                                      disabled={processandoAcao}
+                                    >
                                       Salvar link
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.cancelButton}
+                                      onClick={() =>
+                                        cancelarDestinoQr(qrCode.destino_url)
+                                      }
+                                      disabled={processandoAcao}
+                                    >
+                                      Cancelar
                                     </button>
                                   </form>
                                 )}
@@ -711,14 +798,18 @@ export default function AdminPage() {
                           </span>
                           <button
                             className={styles.dangerButton}
-                            onClick={() => iniciarNovoPeriodo(empresa.id, empresa.nome)}
+                            onClick={() =>
+                              iniciarNovoPeriodo(empresa.id, empresa.nome)
+                            }
                             disabled={processandoAcao}
                           >
                             Iniciar novo período
                           </button>
                           <button
                             className={styles.dangerButton}
-                            onClick={() => arquivarEmpresa(empresa.id, empresa.nome)}
+                            onClick={() =>
+                              arquivarEmpresa(empresa.id, empresa.nome)
+                            }
                             disabled={processandoAcao}
                           >
                             Arquivar
@@ -730,9 +821,14 @@ export default function AdminPage() {
                 </table>
               </div>
 
-              <aside className={styles.qrPreview} aria-label="Visualização do QR Code">
+              <aside
+                className={styles.qrPreview}
+                aria-label="Visualização do QR Code"
+              >
                 <p className={styles.eyebrow}>Visualização</p>
-                <h3>{qrSelecionado ? qrSelecionado.codigo : "Selecione um QR"}</h3>
+                <h3>
+                  {qrSelecionado ? qrSelecionado.codigo : "Selecione um QR"}
+                </h3>
                 {qrImagemUrl && qrSelecionado ? (
                   <>
                     <Image
@@ -785,7 +881,8 @@ export default function AdminPage() {
                     <div>
                       <strong>{empresa.nome}</strong>
                       <span>
-                        {empresa.total_qr_codes} QR/NFC · arquivada em {formatarData(empresa.arquivada_em)}
+                        {empresa.total_qr_codes} QR/NFC · arquivada em{" "}
+                        {formatarData(empresa.arquivada_em)}
                       </span>
                     </div>
                     <button
@@ -800,7 +897,8 @@ export default function AdminPage() {
               </div>
             )}
             <p className={styles.operationNote}>
-              Arquivar pausa o redirecionamento dos QR Codes e tags NFC. O histórico de acessos permanece guardado.
+              Arquivar pausa o redirecionamento dos QR Codes e tags NFC. O
+              histórico de acessos permanece guardado.
             </p>
           </article>
 
@@ -814,7 +912,9 @@ export default function AdminPage() {
             </div>
 
             {dados.acessos_recentes.length === 0 ? (
-              <p className={styles.emptyState}>Ainda não há acessos registrados.</p>
+              <p className={styles.emptyState}>
+                Ainda não há acessos registrados.
+              </p>
             ) : (
               <div className={styles.accessList}>
                 {dados.acessos_recentes.map((acesso, index) => (
