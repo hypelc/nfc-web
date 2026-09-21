@@ -65,10 +65,33 @@
   white-space: nowrap;
 }
 
+.companyPanelButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid var(--border-accent);
+  border-radius: 7px;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .secondaryButton:hover,
 .logoutButton:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.companyPanelButton:hover {
+  border-color: var(--accent);
+  background: var(--surface-accent-hover);
+  color: var(--accent-strong);
 }
 
 .content {
@@ -496,6 +519,18 @@
   opacity: 0.6;
 }
 
+.inlineForm .cancelButton,
+.inlineQrForm .cancelButton {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-control);
+}
+
+.inlineForm .cancelButton:hover:not(:disabled),
+.inlineQrForm .cancelButton:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+
 .qrPreview {
   display: grid;
   min-height: 250px;
@@ -683,6 +718,7 @@
 .secondaryButton:focus-visible,
 .restoreButton:focus-visible,
 .logoutButton:focus-visible,
+.companyPanelButton:focus-visible,
 .textButton:focus-visible,
 .dangerButton:focus-visible,
 .inlineForm input:focus-visible,
@@ -748,6 +784,7 @@
   }
 
   .secondaryButton,
+  .companyPanelButton,
   .logoutButton {
     min-height: 40px;
     padding: 0 9px;

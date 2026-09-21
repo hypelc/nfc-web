@@ -77,6 +77,24 @@
   background: var(--surface-accent-hover);
 }
 
+.printButton {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid var(--border-accent);
+  border-radius: 7px;
+  background: var(--surface-accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.printButton:hover {
+  border-color: var(--accent);
+  background: var(--surface-accent-hover);
+}
+
 .logoutButton:hover {
   border-color: var(--accent);
   color: var(--accent);
@@ -171,7 +189,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -188,6 +206,23 @@
   min-height: 150px;
   align-content: space-between;
   padding: 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.reportState {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 32px 0;
+  color: var(--text-secondary);
+}
+
+.printHeader {
+  display: none;
+}
+
+.noPrint {
 }
 
 .metricCard > span {
@@ -380,6 +415,10 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .totalMetric {
+    grid-column: 1 / -1;
+  }
+
   .mainGrid {
     grid-template-columns: 1fr;
   }
@@ -452,6 +491,10 @@
     gap: 10px;
   }
 
+  .largeMetrics {
+    grid-template-columns: 1fr;
+  }
+
   .metricCard {
     min-width: 0;
     min-height: 132px;
@@ -492,5 +535,105 @@
 
   .lastAccess strong {
     text-align: left;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+
+  .page {
+    min-height: auto;
+    background: #fff;
+    color: #18231e;
+  }
+
+  .content {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .printHeader {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #18231e;
+    color: #18231e;
+  }
+
+  .printHeader p {
+    margin: 0;
+    color: #1b6d47;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .printHeader h2 {
+    font-size: 26px;
+    letter-spacing: -0.04em;
+  }
+
+  .printHeader span {
+    color: #46534c;
+    font-size: 11px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 16px;
+  }
+
+  .metricCard,
+  .panel {
+    border-color: #cfd5ce;
+    background: #fff;
+    break-inside: avoid;
+  }
+
+  .metricCard {
+    min-height: 100px;
+    padding: 16px;
+  }
+
+  .metricCard > span,
+  .metricCard small,
+  .totalLabel,
+  .lastAccess span,
+  .accessRow div span,
+  .accessRow time,
+  .emptyState,
+  .destination small,
+  .destination p,
+  .lastAccess strong {
+    color: #46534c;
+  }
+
+  .metricCard strong,
+  .panelHeading h2,
+  .qrCode {
+    color: #18231e;
+  }
+
+  .mainGrid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+    gap: 14px;
+  }
+
+  .sourceIcon {
+    background: #eaf7ef;
+    color: #1b6d47;
+  }
+
+  .destination {
+    background: #f4f5f0;
   }
 }

@@ -1,19 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
+import {
+  formatReportTimestamp,
+  readAccessSeries,
+} from "@/lib/dashboard-report";
 
 import ThemeToggle from "../components/ThemeToggle";
+import AccessChart from "./AccessChart";
+import WeeklyTrend from "./WeeklyTrend";
 import styles from "./page.module.css";
 
 type DashboardData = {
   empresa: {
     id: number;
     nome: string;
+    stats_start_at?: string | null;
   };
+  serie_temporal?: unknown;
   estatisticas: {
     acessos_hoje: number;
     acessos_ultimos_7_dias: number;
@@ -47,14 +55,12 @@ type EstablishmentsResponse = {
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+const numberFormat = new Intl.NumberFormat("pt-BR");
 
-function formatarData(data: string | null) {
-  if (!data) return "Nenhum acesso registrado";
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(data));
+function mensagemDeErro(error: unknown, fallback: string) {
+  if (error instanceof TypeError)
+    return "Não foi possível conectar ao servidor. Tente novamente.";
+  return error instanceof Error ? error.message : fallback;
 }
 
 async function obterDetalheErro(resposta: Response) {
@@ -79,19 +85,35 @@ export default function DashboardPage() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [role, setRole] = useState<DashboardRole | null>(null);
-  const [establishments, setEstablishments] = useState<EstablishmentOption[]>([]);
+  const [establishments, setEstablishments] = useState<EstablishmentOption[]>(
+    [],
+  );
   const [selectedEstablishmentId, setSelectedEstablishmentId] = useState("");
+  const [chartPeriod, setChartPeriod] = useState<7 | 30>(7);
+  const [printGeneratedAt, setPrintGeneratedAt] = useState(() =>
+    new Date().toISOString(),
+  );
+  const requestRef = useRef<AbortController | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const buscarOverview = useCallback(
-    async (accessToken: string, establishmentId: number) => {
+    async (
+      accessToken: string,
+      establishmentId: number,
+      signal: AbortSignal,
+    ) => {
       const resposta = await fetch(
         `${apiUrl}/dashboard/overview?establishment_id=${establishmentId}`,
         {
+          signal,
+          cache: "no-store",
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         },
       );
+
+      if (signal.aborted) return null;
 
       if (resposta.status === 401) {
         await supabase.auth.signOut();
@@ -103,13 +125,39 @@ export default function DashboardPage() {
         throw new Error(await obterDetalheErro(resposta));
       }
 
-      return (await resposta.json()) as DashboardData;
+      const overview = (await resposta.json()) as DashboardData;
+      if (overview.empresa.id !== establishmentId) {
+        throw new Error(
+          "Os dados recebidos não correspondem à empresa selecionada.",
+        );
+      }
+      return overview;
     },
     [router],
   );
 
   useEffect(() => {
-    let componenteAtivo = true;
+    const controller = new AbortController();
+    requestRef.current = controller;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const changedAccount =
+        event === "SIGNED_IN" &&
+        userIdRef.current !== null &&
+        session?.user.id !== userIdRef.current;
+      if (event === "SIGNED_OUT" || changedAccount) {
+        requestRef.current?.abort();
+        setDados(null);
+        setRole(null);
+        setEstablishments([]);
+        setSelectedEstablishmentId("");
+        setErro("");
+        setCarregando(true);
+        router.replace("/");
+      }
+    });
 
     async function carregarDashboard() {
       try {
@@ -117,20 +165,30 @@ export default function DashboardPage() {
           data: { session },
         } = await supabase.auth.getSession();
 
+        if (controller.signal.aborted) return;
+
         if (!session) {
           router.replace("/");
           return;
         }
+        userIdRef.current = session.user.id;
 
         if (!apiUrl) {
           throw new Error("A URL da API não foi configurada.");
         }
 
-        const respostaEmpresas = await fetch(`${apiUrl}/dashboard/establishments`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
+        const respostaEmpresas = await fetch(
+          `${apiUrl}/dashboard/establishments`,
+          {
+            signal: controller.signal,
+            cache: "no-store",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
           },
-        });
+        );
+
+        if (controller.signal.aborted) return;
 
         if (respostaEmpresas.status === 401) {
           await supabase.auth.signOut();
@@ -142,48 +200,57 @@ export default function DashboardPage() {
           throw new Error(await obterDetalheErro(respostaEmpresas));
         }
 
-        const acesso = (await respostaEmpresas.json()) as EstablishmentsResponse;
+        const acesso =
+          (await respostaEmpresas.json()) as EstablishmentsResponse;
+        if (controller.signal.aborted) return;
         const primeiraEmpresa = acesso.empresas[0];
 
         if (!primeiraEmpresa) {
           throw new Error("Nenhuma empresa disponível para este usuário.");
         }
 
-        const dadosDashboard = await buscarOverview(
-          session.access_token,
-          primeiraEmpresa.id,
-        );
-
-        if (!componenteAtivo || !dadosDashboard) return;
-
         setRole(acesso.role);
         setEstablishments(acesso.empresas);
         setSelectedEstablishmentId(String(primeiraEmpresa.id));
+        setChartPeriod(7);
+
+        const dadosDashboard = await buscarOverview(
+          session.access_token,
+          primeiraEmpresa.id,
+          controller.signal,
+        );
+
+        if (controller.signal.aborted || !dadosDashboard) return;
+
         setDados(dadosDashboard);
         setErro("");
       } catch (error) {
-        if (componenteAtivo) {
+        if (!controller.signal.aborted) {
           setErro(
-            error instanceof Error
-              ? error.message
-              : "Não foi possível conectar ao backend.",
+            mensagemDeErro(error, "Não foi possível conectar ao servidor."),
           );
         }
       } finally {
-        if (componenteAtivo) setCarregando(false);
+        if (!controller.signal.aborted) setCarregando(false);
       }
     }
 
     carregarDashboard();
 
     return () => {
-      componenteAtivo = false;
+      requestRef.current?.abort();
+      controller.abort();
+      subscription.unsubscribe();
     };
   }, [buscarOverview, router]);
 
-  async function trocarEmpresa(event: React.ChangeEvent<HTMLSelectElement>) {
-    const establishmentId = Number(event.target.value);
-    setSelectedEstablishmentId(event.target.value);
+  async function carregarEmpresa(establishmentId: number) {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setSelectedEstablishmentId(String(establishmentId));
+    setChartPeriod(7);
+    setDados(null);
     setCarregando(true);
     setErro("");
 
@@ -191,6 +258,8 @@ export default function DashboardPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
+      if (controller.signal.aborted) return;
 
       if (!session) {
         router.replace("/");
@@ -200,43 +269,73 @@ export default function DashboardPage() {
       const dadosDashboard = await buscarOverview(
         session.access_token,
         establishmentId,
+        controller.signal,
       );
 
-      if (dadosDashboard) setDados(dadosDashboard);
+      if (!controller.signal.aborted && dadosDashboard)
+        setDados(dadosDashboard);
     } catch (error) {
-      setErro(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível carregar a empresa.",
-      );
+      if (!controller.signal.aborted) {
+        setErro(mensagemDeErro(error, "Não foi possível carregar a empresa."));
+      }
     } finally {
-      setCarregando(false);
+      if (!controller.signal.aborted) setCarregando(false);
     }
   }
 
   async function sair() {
+    requestRef.current?.abort();
+    setDados(null);
+    setCarregando(true);
     await supabase.auth.signOut();
     router.replace("/");
   }
 
-  if (carregando) {
-    return <main className={styles.state}>Carregando seu painel...</main>;
+  function imprimirRelatorio() {
+    setPrintGeneratedAt(new Date().toISOString());
+    window.setTimeout(() => window.print(), 0);
   }
 
-  if (erro || !dados) {
+  if (carregando && !role) {
     return (
-      <main className={styles.state}>
-        <p>{erro || "Nenhum dado disponível."}</p>
-        <button onClick={() => window.location.reload()}>Tentar novamente</button>
+      <main className={styles.state} role="status">
+        Carregando seu painel...
       </main>
     );
   }
 
-  const { estatisticas, qr_atual: qrAtual } = dados;
+  if (!role) {
+    return (
+      <main className={styles.state}>
+        <p>{erro || "Nenhum dado disponível."}</p>
+        <button onClick={() => window.location.reload()}>
+          Tentar novamente
+        </button>
+      </main>
+    );
+  }
+
+  const estatisticas = dados?.estatisticas;
+  const qrAtual = dados?.qr_atual;
+  const companyName =
+    establishments.find(
+      (company) => String(company.id) === selectedEstablishmentId,
+    )?.nome ?? "";
+  const series =
+    dados && estatisticas
+      ? readAccessSeries(dados.serie_temporal, estatisticas)
+      : null;
+  const hasLargeCounts =
+    estatisticas &&
+    [
+      estatisticas.acessos_hoje,
+      estatisticas.acessos_ultimos_7_dias,
+      estatisticas.total_acessos,
+    ].some((count) => numberFormat.format(count).length > 6);
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${styles.noPrint}`}>
         <div className={styles.brand}>
           <Image
             className={styles.brandLogo}
@@ -249,28 +348,28 @@ export default function DashboardPage() {
           <span>NFC</span>
         </div>
 
-          <div className={styles.headerActions}>
-            <span className={styles.clientName}>{dados.empresa.nome}</span>
-            <ThemeToggle />
-            {role === "admin" && (
-              <button
-                className={styles.adminButton}
-                onClick={() => router.push("/admin")}
-              >
-                Painel admin
-              </button>
-            )}
-            <button className={styles.logoutButton} onClick={sair}>
-              Sair
+        <div className={styles.headerActions}>
+          <span className={styles.clientName}>{companyName}</span>
+          <ThemeToggle />
+          {role === "admin" && (
+            <button
+              className={styles.adminButton}
+              onClick={() => router.push("/admin")}
+            >
+              Painel admin
             </button>
+          )}
+          <button className={styles.logoutButton} onClick={sair}>
+            Sair
+          </button>
         </div>
       </header>
 
       <section className={styles.content}>
-        <div className={styles.heading}>
+        <div className={`${styles.heading} ${styles.noPrint}`}>
           <div>
             <p className={styles.eyebrow}>Visão geral</p>
-            <h1>Olá, {dados.empresa.nome}.</h1>
+            <h1>Olá, {companyName}.</h1>
             <p>Acompanhe como seus clientes estão chegando à avaliação.</p>
           </div>
           <div className={styles.headingActions}>
@@ -279,7 +378,9 @@ export default function DashboardPage() {
                 <span>Visualizando empresa</span>
                 <select
                   value={selectedEstablishmentId}
-                  onChange={trocarEmpresa}
+                  onChange={(event) =>
+                    carregarEmpresa(Number(event.target.value))
+                  }
                 >
                   {establishments.map((establishment) => (
                     <option key={establishment.id} value={establishment.id}>
@@ -289,100 +390,177 @@ export default function DashboardPage() {
                 </select>
               </label>
             )}
-            <span className={styles.liveStatus}>● Dados atualizados</span>
+            {!carregando && !erro && dados && (
+              <span className={styles.liveStatus}>● Dados atualizados</span>
+            )}
+            {!carregando && !erro && dados && (
+              <button
+                type="button"
+                className={styles.printButton}
+                onClick={imprimirRelatorio}
+              >
+                Imprimir ou salvar relatório
+              </button>
+            )}
           </div>
         </div>
 
-        <section className={styles.metrics} aria-label="Resumo de acessos">
-          <article className={styles.metricCard}>
-            <span>Acessos hoje</span>
-            <strong>{estatisticas.acessos_hoje}</strong>
-            <small>Leituras registradas hoje</small>
-          </article>
-          <article className={styles.metricCard}>
-            <span>Últimos 7 dias</span>
-            <strong>{estatisticas.acessos_ultimos_7_dias}</strong>
-            <small>Movimento recente</small>
-          </article>
-          <article className={styles.metricCard}>
-            <span>QR Code</span>
-            <strong>{estatisticas.acessos_qr}</strong>
-            <small>Acessos identificados</small>
-          </article>
-          <article className={styles.metricCard}>
-            <span>NFC</span>
-            <strong>{estatisticas.acessos_nfc}</strong>
-            <small>Acessos identificados</small>
-          </article>
-        </section>
-
-        <section className={styles.mainGrid}>
-          <article className={styles.panel}>
-            <div className={styles.panelHeading}>
-              <div>
-                <p className={styles.eyebrow}>Atividade</p>
-                <h2>Acessos recentes</h2>
-              </div>
-              <span className={styles.totalLabel}>
-                {estatisticas.total_acessos} no total
+        {carregando ? (
+          <div className={styles.reportState} role="status">
+            Carregando dados da empresa...
+          </div>
+        ) : erro || !dados || !estatisticas ? (
+          <div className={styles.reportState} role="alert">
+            <p>{erro || "Nenhum dado disponível."}</p>
+            <button
+              className={styles.logoutButton}
+              onClick={() => carregarEmpresa(Number(selectedEstablishmentId))}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className={styles.printHeader}>
+              <p>Relatório de acessos</p>
+              <h2>{companyName}</h2>
+              <span>
+                Gerado em {formatReportTimestamp(printGeneratedAt)} · gráfico
+                diário: últimos {chartPeriod} dias · tendência semanal: últimos
+                30 dias
               </span>
             </div>
+            <section
+              className={`${styles.metrics} ${hasLargeCounts ? styles.largeMetrics : ""}`}
+              aria-label="Resumo de acessos"
+            >
+              <article className={styles.metricCard}>
+                <span>Acessos hoje</span>
+                <strong>
+                  {numberFormat.format(estatisticas.acessos_hoje)}
+                </strong>
+                <small>Leituras registradas hoje</small>
+              </article>
+              <article className={styles.metricCard}>
+                <span>Últimos 7 dias</span>
+                <strong>
+                  {numberFormat.format(estatisticas.acessos_ultimos_7_dias)}
+                </strong>
+                <small>Movimento recente</small>
+              </article>
+              <article className={`${styles.metricCard} ${styles.totalMetric}`}>
+                <span>Total de acessos</span>
+                <strong>
+                  {numberFormat.format(estatisticas.total_acessos)}
+                </strong>
+                <small>
+                  {dados.empresa.stats_start_at
+                    ? `Desde ${formatReportTimestamp(dados.empresa.stats_start_at, true)}`
+                    : "Desde o início das estatísticas"}
+                </small>
+              </article>
+            </section>
 
-            {dados.acessos_recentes.length === 0 ? (
-              <p className={styles.emptyState}>
-                Os acessos aparecerão aqui assim que alguém ler o QR Code ou a tag NFC.
-              </p>
-            ) : (
-              <div className={styles.accessList}>
-                {dados.acessos_recentes.map((acesso, index) => (
-                  <div className={styles.accessRow} key={`${acesso.acessado_em}-${index}`}>
-                    <span
-                      className={`${styles.sourceIcon} ${
-                        acesso.origem === "nfc" ? styles.nfcIcon : ""
-                      }`}
-                    >
-                      {acesso.origem === "nfc" ? "NFC" : "QR"}
-                    </span>
-                    <div>
-                      <strong>{acesso.origem === "nfc" ? "Tag NFC" : "QR Code"}</strong>
-                      <span>Código {acesso.codigo}</span>
-                    </div>
-                    <time dateTime={acesso.acessado_em}>
-                      {formatarData(acesso.acessado_em)}
-                    </time>
+            <AccessChart
+              key={dados.empresa.id}
+              series={series}
+              period={chartPeriod}
+              onPeriodChange={setChartPeriod}
+            />
+
+            <WeeklyTrend
+              series={series}
+              statsStartAt={dados.empresa.stats_start_at}
+            />
+
+            <section className={styles.mainGrid}>
+              <article className={styles.panel}>
+                <div className={styles.panelHeading}>
+                  <div>
+                    <p className={styles.eyebrow}>Atividade</p>
+                    <h2>Acessos recentes</h2>
                   </div>
-                ))}
-              </div>
-            )}
-          </article>
+                  <span className={styles.totalLabel}>
+                    {numberFormat.format(estatisticas.total_acessos)} no total
+                  </span>
+                </div>
 
-          <article className={styles.panel}>
-            <div className={styles.panelHeading}>
-              <div>
-                <p className={styles.eyebrow}>Seu QR Code</p>
-                <h2>Destino atual</h2>
-              </div>
-              <span className={qrAtual?.ativo ? styles.activeTag : styles.inactiveTag}>
-                {qrAtual?.ativo ? "Ativo" : "Inativo"}
-              </span>
-            </div>
+                {dados.acessos_recentes.length === 0 ? (
+                  <p className={styles.emptyState}>
+                    Os acessos aparecerão aqui assim que alguém ler o QR Code ou
+                    a tag NFC.
+                  </p>
+                ) : (
+                  <div className={styles.accessList}>
+                    {dados.acessos_recentes.map((acesso, index) => (
+                      <div
+                        className={styles.accessRow}
+                        key={`${acesso.acessado_em}-${index}`}
+                      >
+                        <span className={styles.sourceIcon} aria-hidden="true">
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <path d="M4 16l6-6 4 4 6-9M14 5h6v6" />
+                          </svg>
+                        </span>
+                        <div>
+                          <strong>Acesso registrado</strong>
+                          <span>Código {acesso.codigo}</span>
+                        </div>
+                        <time dateTime={acesso.acessado_em}>
+                          {formatReportTimestamp(acesso.acessado_em)}
+                        </time>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
 
-            {qrAtual ? (
-              <div className={styles.destination}>
-                <span className={styles.qrCode}>{qrAtual.codigo}</span>
-                <p>{qrAtual.destino_url}</p>
-                <small>O destino pode ser alterado sem gerar outro QR Code.</small>
-              </div>
-            ) : (
-              <p className={styles.emptyState}>Nenhum QR Code cadastrado.</p>
-            )}
+              <article className={styles.panel}>
+                <div className={styles.panelHeading}>
+                  <div>
+                    <p className={styles.eyebrow}>Seu QR Code</p>
+                    <h2>Destino atual</h2>
+                  </div>
+                  <span
+                    className={
+                      qrAtual?.ativo ? styles.activeTag : styles.inactiveTag
+                    }
+                  >
+                    {qrAtual?.ativo ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
 
-            <div className={styles.lastAccess}>
-              <span>Último acesso</span>
-              <strong>{formatarData(estatisticas.ultimo_acesso)}</strong>
-            </div>
-          </article>
-        </section>
+                {qrAtual ? (
+                  <div className={styles.destination}>
+                    <span className={styles.qrCode}>{qrAtual.codigo}</span>
+                    <p>{qrAtual.destino_url}</p>
+                    <small>
+                      O destino pode ser alterado sem gerar outro QR Code.
+                    </small>
+                  </div>
+                ) : (
+                  <p className={styles.emptyState}>
+                    Nenhum QR Code cadastrado.
+                  </p>
+                )}
+
+                <div className={styles.lastAccess}>
+                  <span>Último acesso</span>
+                  <strong>
+                    {formatReportTimestamp(estatisticas.ultimo_acesso)}
+                  </strong>
+                </div>
+              </article>
+            </section>
+          </>
+        )}
       </section>
     </main>
   );
