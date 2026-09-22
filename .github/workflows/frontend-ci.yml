@@ -50,7 +50,7 @@ jobs:
         run: npx next typegen
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Build
         run: npm run build
