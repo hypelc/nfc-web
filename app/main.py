@@ -11,6 +11,7 @@ app = FastAPI() # Cria o objeto principal da API. O Uvicorn procura esse objeto 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"^https://(?:nfc-web-git-[a-z0-9-]+|nfc-[a-z0-9]+)-jeanluccasgl-3636s-projects\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
