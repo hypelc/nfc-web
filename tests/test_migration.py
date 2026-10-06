@@ -27,3 +27,26 @@ class NonDestructiveMigrationTests(unittest.TestCase):
 
         self.assertNotIn("DELETE FROM ACCESS_EVENTS", sql)
         self.assertNotIn("TRUNCATE ACCESS_EVENTS", sql)
+
+    def test_oauth_google_protege_tokens_e_state_da_data_api(self):
+        migration = (
+            Path(__file__).resolve().parents[1]
+            / "sql"
+            / "004_google_business_oauth.sql"
+        ).read_text(encoding="utf-8").upper()
+
+        self.assertIn(
+            "ALTER TABLE PUBLIC.GOOGLE_BUSINESS_OAUTH_STATES ENABLE ROW LEVEL SECURITY",
+            migration,
+        )
+        self.assertIn(
+            "ALTER TABLE PUBLIC.GOOGLE_BUSINESS_CONNECTIONS ENABLE ROW LEVEL SECURITY",
+            migration,
+        )
+        self.assertIn(
+            "REVOKE ALL ON TABLE PUBLIC.GOOGLE_BUSINESS_CONNECTIONS",
+            migration,
+        )
+        self.assertIn("ACCESS_TOKEN_ENCRYPTED", migration)
+        self.assertIn("REFRESH_TOKEN_ENCRYPTED", migration)
+        self.assertNotIn("DROP TABLE", migration)

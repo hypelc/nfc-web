@@ -9,10 +9,14 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   frontend:
     name: Frontend checks
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL}}
@@ -39,12 +43,21 @@ jobs:
 
       - name: Lint
         run: npm run lint
- 
+
       - name: Generate Next.js types
         run: npx next typegen
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Unit tests
+        run: node --experimental-strip-types --test tests/*.test.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: npm run test:browser
 
       - name: Build
         run: npm run build
