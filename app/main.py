@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse # Biblioteca para redirecionar o 
 from app.database import abrir_conexao # Função para abrir a conexão com o banco de dados
 from app.config import CORS_ORIGINS
 from app.routers.dashboard import router as dashboard_router
+from app.routers.google_business import router as google_business_router
 
 app = FastAPI() # Cria o objeto principal da API. O Uvicorn procura esse objeto quando executamos - python -m uvicorn app.main:app --reload
 
@@ -17,6 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(dashboard_router, prefix="/dashboard", tags=["dashboard"])
+app.include_router(google_business_router, tags=["google-business"])
 
 @app.get("/") # Informa ao FastAPI que a função abaixo será executada quando alguém acessar a rota raiz ("/") da API usando o método GET.
 def inicio():

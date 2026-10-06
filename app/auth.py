@@ -1,4 +1,7 @@
+import base64
+import binascii
 import json
+from uuid import UUID
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -9,6 +12,33 @@ from app.config import SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL
 
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def _extrair_session_id(token: str, usuario_id: str) -> str | None:
+    """Lê session_id somente após o Auth do Supabase validar o bearer token."""
+
+    try:
+        partes = token.split(".")
+        if len(partes) != 3:
+            return None
+        payload_codificado = partes[1]
+        payload = base64.urlsafe_b64decode(
+            payload_codificado + "=" * (-len(payload_codificado) % 4)
+        )
+        claims = json.loads(payload)
+        if claims.get("sub") != str(usuario_id):
+            return None
+        return str(UUID(claims["session_id"]))
+    except (
+        AttributeError,
+        binascii.Error,
+        KeyError,
+        TypeError,
+        ValueError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+    ):
+        return None
 
 
 def obter_usuario_atual(
@@ -76,4 +106,7 @@ def obter_usuario_atual(
     return {
         "id": usuario_id,
         "email": dados.get("email"),
+        # Os claims só são confiáveis porque o mesmo bearer acabou de ser
+        # validado pelo endpoint /auth/v1/user acima.
+        "session_id": _extrair_session_id(credenciais.credentials, usuario_id),
     }

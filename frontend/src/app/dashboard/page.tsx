@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import {
+  shouldRenderGoogleBusinessConnection,
+  type DashboardRole,
+} from "@/lib/dashboard-access";
 
 import { supabase } from "@/lib/supabase";
 import {
@@ -12,6 +16,7 @@ import {
 
 import ThemeToggle from "../components/ThemeToggle";
 import AccessChart from "./AccessChart";
+import GoogleBusinessConnection from "./GoogleBusinessConnection";
 import WeeklyTrend from "./WeeklyTrend";
 import styles from "./page.module.css";
 
@@ -41,8 +46,6 @@ type DashboardData = {
     acessado_em: string;
   }>;
 };
-
-type DashboardRole = "admin" | "client";
 
 type EstablishmentOption = {
   id: number;
@@ -460,6 +463,10 @@ export default function DashboardPage() {
                 </small>
               </article>
             </section>
+
+            {shouldRenderGoogleBusinessConnection(role) && (
+              <GoogleBusinessConnection />
+            )}
 
             <AccessChart
               key={dados.empresa.id}

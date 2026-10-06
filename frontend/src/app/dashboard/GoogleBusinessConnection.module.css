@@ -1,0 +1,145 @@
+.panel {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+  padding: 24px;
+  border: 1px solid var(--line, rgba(31, 60, 49, 0.14));
+  border-radius: 22px;
+  background: var(--surface, #ffffff);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent, #247a52);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  margin: 0;
+  color: var(--ink, #17362b);
+  font-size: 1.15rem;
+}
+
+.description,
+.muted,
+.currentLocation {
+  margin: 0;
+  color: var(--muted, #61746b);
+  line-height: 1.5;
+}
+
+.connected,
+.disconnected {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.connected {
+  color: #17643f;
+  background: #e6f5eb;
+}
+
+.disconnected {
+  color: #805523;
+  background: #fff2d8;
+}
+
+.error,
+.message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #8c2c32;
+  background: #fff0f0;
+}
+
+.message {
+  color: #17643f;
+  background: #eaf7ee;
+}
+
+.controls {
+  display: grid;
+  gap: 14px;
+}
+
+.locationLabel {
+  display: grid;
+  gap: 7px;
+  max-width: 520px;
+  color: var(--ink, #17362b);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.locationLabel select {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line, rgba(31, 60, 49, 0.18));
+  border-radius: 10px;
+  color: var(--ink, #17362b);
+  background: var(--surface, #ffffff);
+  font: inherit;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 1px solid #247a52;
+  color: #ffffff;
+  background: #247a52;
+}
+
+.secondaryButton {
+  border: 1px solid var(--line, rgba(31, 60, 49, 0.18));
+  color: var(--ink, #17362b);
+  background: transparent;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.locationLabel select:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 620px) {
+  .panel {
+    padding: 18px;
+  }
+
+  .heading {
+    flex-direction: column;
+  }
+}
