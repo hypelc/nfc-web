@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { once } from "node:events";
 import { createServer } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import path from "node:path";
@@ -38,6 +37,7 @@ const fakeSession = {
 };
 
 let appProcess;
+let appProcessClosed;
 let browser;
 let appUrl;
 let appOutput = "";
@@ -88,8 +88,12 @@ before(async () => {
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
       },
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
     },
   );
+  appProcessClosed = new Promise((resolve) => {
+    appProcess.once("close", resolve);
+  });
   appProcess.stdout.setEncoding("utf8");
   appProcess.stderr.setEncoding("utf8");
   for (const stream of [appProcess.stdout, appProcess.stderr]) {
@@ -102,13 +106,40 @@ before(async () => {
   browser = await chromium.launch({ headless: true });
 });
 
+function signalAppProcess(signal) {
+  if (!appProcess?.pid) return;
+
+  if (process.platform === "win32") {
+    appProcess.kill(signal);
+    return;
+  }
+
+  try {
+    process.kill(-appProcess.pid, signal);
+  } catch (error) {
+    if (error.code !== "ESRCH") throw error;
+  }
+}
+
+async function stopAppProcess() {
+  if (!appProcess?.pid) return;
+
+  signalAppProcess("SIGTERM");
+  const stopped = await Promise.race([
+    appProcessClosed.then(() => true),
+    delay(5000).then(() => false),
+  ]);
+  if (stopped) return;
+
+  signalAppProcess("SIGKILL");
+  await appProcessClosed;
+}
+
 after(async () => {
-  await browser?.close();
-  if (appProcess && appProcess.exitCode === null) {
-    const stopped = once(appProcess, "exit");
-    appProcess.kill("SIGTERM");
-    await Promise.race([stopped, delay(5000)]);
-    if (appProcess.exitCode === null) appProcess.kill("SIGKILL");
+  try {
+    await browser?.close();
+  } finally {
+    await stopAppProcess();
   }
 });
 
